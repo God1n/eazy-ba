@@ -8,7 +8,7 @@ export const baInitSchema = z.object({ projectRoot: z.string() });
 const DIRS = [
   "01-vision", "02-stakeholders/personas", "03-requirements/functional",
   "03-requirements/non-functional", "04-use-cases", "05-stories",
-  "06-analysis", "07-changelog",
+  "06-analysis", "07-changelog", "08-decisions",
 ];
 
 const FILES: Record<string, string> = {

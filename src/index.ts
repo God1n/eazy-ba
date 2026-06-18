@@ -4,12 +4,16 @@ import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { baInit, baInitSchema } from "./tools/baInit.js";
-import { baCreateArtifact, baCreateSchema } from "./tools/baCreateArtifact.js";
-import { baUpdateArtifact, baUpdateSchema } from "./tools/baUpdateArtifact.js";
-import { baLink, baLinkSchema } from "./tools/baLink.js";
 import { baGet, baGetSchema, baList, baListSchema } from "./tools/baQuery.js";
+import { baSessionStart, baSessionStartSchema } from "./tools/baSessionStart.js";
+import { baAssess, baAssessSchema } from "./tools/baAssess.js";
+import { baRecordAnswers, baRecordAnswersSchema } from "./tools/baRecordAnswers.js";
+import { baApply, baApplySchema } from "./tools/baApply.js";
+import { baStatus, baStatusSchema } from "./tools/baStatus.js";
+import { INSTRUCTIONS } from "./instructions.js";
 
-export const VERSION = "0.1.1";
+export { INSTRUCTIONS } from "./instructions.js";
+export const VERSION = "0.2.0";
 
 type Handler = (args: any) => unknown;
 
@@ -28,25 +32,23 @@ export function wrap(handler: Handler) {
 }
 
 export function buildServer(): McpServer {
-  const server = new McpServer({ name: "eazy-ba", version: VERSION });
+  const server = new McpServer({ name: "eazy-ba", version: VERSION }, { instructions: INSTRUCTIONS });
   server.registerTool("ba_init",
-    { description: "Scaffold the docs/ba BA docs tree.", inputSchema: baInitSchema.shape },
-    wrap(baInit));
-  server.registerTool("ba_create_artifact",
-    { description: "Create a persona/fr/nfr/use-case/story artifact.", inputSchema: baCreateSchema.shape },
-    wrap(baCreateArtifact));
-  server.registerTool("ba_update_artifact",
-    { description: "Update an artifact; bumps version and logs the change.", inputSchema: baUpdateSchema.shape },
-    wrap(baUpdateArtifact));
-  server.registerTool("ba_link",
-    { description: "Link two artifacts via implements/satisfies/refines.", inputSchema: baLinkSchema.shape },
-    wrap(baLink));
+    { description: "Scaffold the docs/ba BA docs tree.", inputSchema: baInitSchema.shape }, wrap(baInit));
+  server.registerTool("ba_session_start",
+    { description: "Start or resume a BA session (mode: discovery | stabilize).", inputSchema: baSessionStartSchema.shape }, wrap(baSessionStart));
+  server.registerTool("ba_assess",
+    { description: "Analyze current state and return the questions to ask the user. Writes no BA documents (it only updates session state).", inputSchema: baAssessSchema.shape }, wrap(baAssess));
+  server.registerTool("ba_record_answers",
+    { description: "Record the user's answers as traceable decisions.", inputSchema: baRecordAnswersSchema.shape }, wrap(baRecordAnswers));
+  server.registerTool("ba_apply",
+    { description: "Materialize/update documents from recorded decisions. Every artifact must cite derived_from decisions.", inputSchema: baApplySchema.shape }, wrap(baApply));
+  server.registerTool("ba_status",
+    { description: "Report open questions, gaps, pending decisions, and stability.", inputSchema: baStatusSchema.shape }, wrap(baStatus));
   server.registerTool("ba_get",
-    { description: "Get one artifact by id.", inputSchema: baGetSchema.shape },
-    wrap(baGet));
+    { description: "Get one artifact by id.", inputSchema: baGetSchema.shape }, wrap(baGet));
   server.registerTool("ba_list",
-    { description: "List artifacts filtered by type/status/priority/tag.", inputSchema: baListSchema.shape },
-    wrap(baList));
+    { description: "List artifacts filtered by type/status/priority/tag.", inputSchema: baListSchema.shape }, wrap(baList));
   return server;
 }
 

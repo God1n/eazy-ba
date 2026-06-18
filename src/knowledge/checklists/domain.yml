@@ -1,0 +1,14 @@
+- type: story
+  dimensions:
+    - "Who is the actor for this story, and is that a defined persona?"
+    - "What is the success outcome (the Then) in concrete, testable terms?"
+    - "What should happen on the main failure or error path?"
+    - "Are there edge cases (empty, maximum, concurrent, offline) to handle?"
+- type: fr
+  dimensions:
+    - "What triggers this requirement, and what are its preconditions?"
+    - "What are the explicit acceptance rules for considering it met?"
+- type: nfr
+  dimensions:
+    - "What is the measurable target (number + unit) for this non-functional requirement?"
+    - "Under what conditions or load must that target hold?"
