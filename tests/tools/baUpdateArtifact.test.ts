@@ -26,6 +26,13 @@ test("throws on unknown id", () => {
   expect(() => baUpdateArtifact({ projectRoot: root, id: "US-999" })).toThrow();
 });
 
+test("baCreateArtifact then baUpdateArtifact without baInit does not throw (changelog dir created on demand)", () => {
+  const root = mkdtempSync(join(tmpdir(), "ba-"));
+  // Deliberately skip baInit — changelog dir does not exist
+  const c = baCreateArtifact({ projectRoot: root, type: "story", title: "Auto dir", updated: "2026-06-18" } as any);
+  expect(() => baUpdateArtifact({ projectRoot: root, id: c.id, status: "approved", updated: "2026-06-19" })).not.toThrow();
+});
+
 test("renaming the title moves the file and removes the orphan", () => {
   const root = mkdtempSync(join(tmpdir(), "ba-"));
   baInit({ projectRoot: root });

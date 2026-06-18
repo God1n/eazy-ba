@@ -19,3 +19,12 @@ test("reads _config.yml overrides", () => {
   expect(cfg.docsRoot).toBe(join(root, "specs/ba"));
   expect(cfg.idStart).toBe(100);
 });
+
+test("absolute docsRoot in _config.yml is used as-is (not joined to projectRoot)", () => {
+  const root = mkdtempSync(join(tmpdir(), "ba-"));
+  const absoluteDocsRoot = mkdtempSync(join(tmpdir(), "ba-abs-"));
+  mkdirSync(join(root, "docs/ba"), { recursive: true });
+  writeFileSync(join(root, "docs/ba/_config.yml"), `docsRoot: ${absoluteDocsRoot}\n`);
+  const cfg = resolveConfig(root);
+  expect(cfg.docsRoot).toBe(absoluteDocsRoot);
+});

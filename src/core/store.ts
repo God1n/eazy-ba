@@ -20,7 +20,9 @@ export function slugify(s: string): string {
 }
 
 export function filePathFor(fm: Frontmatter, docsRoot: string): string {
-  return join(folderFor(fm.type, docsRoot), `${fm.id}-${slugify(fm.title)}.md`);
+  const slug = slugify(fm.title);
+  const filename = slug ? `${fm.id}-${slug}.md` : `${fm.id}.md`;
+  return join(folderFor(fm.type, docsRoot), filename);
 }
 
 export function writeArtifact(art: Omit<Artifact, "filePath">, docsRoot: string): string {
@@ -49,5 +51,6 @@ export function listArtifacts(docsRoot: string): Artifact[] {
       if (art.frontmatter && art.frontmatter.id) out.push(art);
     }
   }
+  out.sort((a, b) => a.frontmatter.id.localeCompare(b.frontmatter.id));
   return out;
 }
