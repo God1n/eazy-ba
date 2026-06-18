@@ -38,7 +38,7 @@ export function buildServer(): McpServer {
   server.registerTool("ba_session_start",
     { description: "Start or resume a BA session (mode: discovery | stabilize).", inputSchema: baSessionStartSchema.shape }, wrap(baSessionStart));
   server.registerTool("ba_assess",
-    { description: "Analyze current state and return the questions to ask the user. Creates nothing.", inputSchema: baAssessSchema.shape }, wrap(baAssess));
+    { description: "Analyze current state and return the questions to ask the user. Writes no BA documents (it only updates session state).", inputSchema: baAssessSchema.shape }, wrap(baAssess));
   server.registerTool("ba_record_answers",
     { description: "Record the user's answers as traceable decisions.", inputSchema: baRecordAnswersSchema.shape }, wrap(baRecordAnswers));
   server.registerTool("ba_apply",

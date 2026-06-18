@@ -91,13 +91,21 @@ autonomous tools `ba_create_artifact`, `ba_update_artifact`, and `ba_link` are
   knowledge. In stabilize it runs structural gap detection and emits a question
   per open gap.
 - **`ba_record_answers(items)`** — appends each Q&A to the decisions ledger as
-  `DEC-###`, tagged with round + topic. Updates session state (clears the
-  matching open questions, adds the new decisions to `pending_apply`).
-- **`ba_apply`** — materializes/updates artifacts from
-  **recorded-but-unapplied** decisions (`pending_apply`), stamping
-  `derived_from: [DEC-###]` on artifacts and `informs: [<artifact-id>]` on the
-  decisions. It can only act on decisions that exist in the ledger; a reference
-  to a non-existent decision is an error.
+  `DEC-###`, tagged with round + topic (and the originating question `ref` when
+  provided). Updates session state: clears the matching open questions (by
+  `ref`, falling back to exact text) and adds the new decisions to
+  `pending_apply`. Recording an item whose `ref` already has a decision is a
+  no-op, so retries are idempotent.
+- **`ba_apply`** — materializes/updates artifacts from **agent-proposed specs,
+  each of which must cite the recorded decisions it derives from**
+  (`derived_from`). `ba_apply` validates the whole batch up front — every spec's
+  invariants and every cited decision must be valid before anything is written,
+  so a bad spec never leaves partial writes — then stamps `derived_from:
+  [DEC-###]` on artifacts and `informs: [<artifact-id>]` on the decisions, and
+  prunes the consumed decisions from `pending_apply`. A reference to a decision
+  not in the ledger is an error. (The agent authors the artifact content from
+  the answers; the structural requirement is only that every artifact trace to
+  recorded decisions — that is the anti-assumption guarantee.)
 - **`ba_status`** — dashboard: open questions, unanswered structural gaps,
   pending vs applied decisions, and the **stability** readout (stable = no open
   questions AND no unanswered gaps).
@@ -209,11 +217,13 @@ Each gap maps to a question template in the question bank. Semantic coverage
 ## Error Handling
 
 - zod validation on every tool input.
-- `ba_apply` errors clearly if a decision reference is not in the ledger — this
-  is the anti-assumption guard, surfaced through the existing `isError` wrapper.
-- `ba_apply` is idempotent: it processes only `pending_apply`; re-running is a
-  no-op for already-applied decisions.
-- `ba_record_answers` dedups by question `ref`.
+- `ba_apply` validates the entire batch before any write: every spec's
+  invariants (e.g. `create` needs type+title) and every cited `derived_from`
+  decision must be valid, so a bad spec never leaves partial writes. A decision
+  reference not in the ledger is the anti-assumption guard, surfaced through the
+  existing `isError` wrapper.
+- `ba_record_answers` dedups by question `ref`: re-recording an item whose `ref`
+  already has a decision is a no-op, making retries idempotent.
 - Tolerant reads / safe writes carry over from Phase 1 (unknown frontmatter
   keys and hand-edited bodies preserved).
 

@@ -53,6 +53,17 @@ test("pre-flight atomicity: mixed batch with one bad decision writes no files", 
   expect(readdirSync(storiesDir)).toHaveLength(0);
 });
 
+test("pre-flight atomicity: a later spec missing title writes no files", () => {
+  const root = mkdtempSync(join(tmpdir(), "ba-"));
+  seedDecision(root); // creates DEC-001
+  const storiesDir = join(root, "docs/ba", "05-stories");
+  expect(() => baApply({ projectRoot: root, artifacts: [
+    { op: "create", type: "story", title: "Good", body: "Given a When b Then c", derived_from: ["DEC-001"] },
+    { op: "create", type: "story", body: "Given x When y Then z", derived_from: ["DEC-001"] }, // no title
+  ] })).toThrow(/create requires type and title/);
+  expect(readdirSync(storiesDir)).toHaveLength(0);
+});
+
 test("update op patches status and body, preserving derived_from", () => {
   const root = mkdtempSync(join(tmpdir(), "ba-"));
   seedDecision(root); // creates DEC-001

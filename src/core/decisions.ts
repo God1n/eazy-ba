@@ -7,6 +7,7 @@ export interface DecisionInput {
   answer: string;
   asked_round: "surface" | "domain" | "gap";
   topic: string;
+  ref?: string;
   updated?: string;
 }
 
@@ -27,6 +28,7 @@ export function recordDecision(input: DecisionInput, docsRoot: string): string {
     answer: input.answer,
     asked_round: input.asked_round,
     topic: input.topic,
+    ...(input.ref ? { ref: input.ref } : {}),
     applied: false,
     informs: [],
   };

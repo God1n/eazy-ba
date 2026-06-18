@@ -39,10 +39,20 @@ export function baApply(input: z.infer<typeof baApplySchema>): { applied: Array<
 
   const ledger = new Set(listDecisions(docsRoot).map(d => d.id));
 
-  // pre-flight: validate every cited decision across ALL specs before writing anything
-  const allDecIds = new Set(input.artifacts.flatMap(s => s.derived_from));
-  for (const dec of allDecIds) {
-    if (!ledger.has(dec)) throw new Error(`Unknown or unrecorded decision: ${dec}. Record the answer before applying.`);
+  // pre-flight: validate EVERY spec's invariants and cited decisions across the
+  // whole batch before writing anything, so a bad spec never leaves partial writes.
+  for (const spec of input.artifacts) {
+    if (spec.op === "create") {
+      if (!spec.type || !spec.title) throw new Error("create requires type and title");
+    } else {
+      if (!spec.id) throw new Error("update requires id");
+      if (spec.implements || spec.satisfies || spec.refines) {
+        throw new Error("ba_apply update does not support changing implements/satisfies/refines yet; create the link via a new artifact or edit the file directly.");
+      }
+    }
+    for (const dec of spec.derived_from) {
+      if (!ledger.has(dec)) throw new Error(`Unknown or unrecorded decision: ${dec}. Record the answer before applying.`);
+    }
   }
 
   const applied: Array<{ id: string; op: string }> = [];
@@ -51,20 +61,15 @@ export function baApply(input: z.infer<typeof baApplySchema>): { applied: Array<
   for (const spec of input.artifacts) {
     let artifactId: string;
     if (spec.op === "create") {
-      if (!spec.type || !spec.title) throw new Error("create requires type and title");
       const created = baCreateArtifact({
-        projectRoot: input.projectRoot, type: spec.type, title: spec.title,
+        projectRoot: input.projectRoot, type: spec.type!, title: spec.title!,
         priority: spec.priority, body: spec.body,
         implements: spec.implements, satisfies: spec.satisfies, refines: spec.refines,
       });
       artifactId = created.id;
     } else {
-      if (!spec.id) throw new Error("update requires id");
-      if (spec.implements || spec.satisfies || spec.refines) {
-        throw new Error("ba_apply update does not support changing implements/satisfies/refines yet; create the link via a new artifact or edit the file directly.");
-      }
       const updated = baUpdateArtifact({
-        projectRoot: input.projectRoot, id: spec.id, title: spec.title,
+        projectRoot: input.projectRoot, id: spec.id!, title: spec.title,
         status: spec.status, priority: spec.priority, body: spec.body,
       });
       artifactId = updated.id;
