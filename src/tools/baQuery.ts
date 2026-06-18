@@ -29,7 +29,10 @@ export function baList(input: z.infer<typeof baListSchema>):
     .filter(a => !input.priority || a.frontmatter.priority === input.priority)
     .filter(a => !input.tag || (a.frontmatter.tags ?? []).includes(input.tag))
     .map(a => ({
-      id: a.frontmatter.id, type: a.frontmatter.type, title: a.frontmatter.title,
-      status: a.frontmatter.status, priority: a.frontmatter.priority,
+      id: a.frontmatter.id,
+      type: a.frontmatter.type,
+      title: a.frontmatter.title,
+      status: a.frontmatter.status,
+      ...(a.frontmatter.priority ? { priority: a.frontmatter.priority } : {}),
     }));
 }
