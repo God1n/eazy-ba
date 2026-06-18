@@ -824,7 +824,7 @@ git commit -m "feat: add ba_create_artifact tool with templates"
 - Produces:
   - `function appendChangelog(docsRoot: string, line: string): void` (changelog.ts) — appends a bullet to `07-changelog/CHANGELOG.md`.
   - `const baUpdateSchema = z.object({ projectRoot: z.string(), id: z.string(), title: z.string().optional(), status: z.enum(["draft","reviewed","approved","implemented","obsolete"]).optional(), priority: z.enum(["must","should","could","wont"]).optional(), body: z.string().optional(), updated: z.string().optional() })`
-  - `function baUpdateArtifact(input): { id: string; filePath: string; version: number }` — finds artifact by id, merges changed fields, bumps `version`, sets `updated`, preserves unknown frontmatter keys and (unless `body` given) existing body, writes, and appends a changelog line. Throws if id not found.
+  - `function baUpdateArtifact(input): { id: string; filePath: string; version: number }` — finds artifact by id, merges changed fields, bumps `version`, sets `updated`, preserves unknown frontmatter keys and (unless `body` given) existing body, writes, and appends a changelog line. Throws if id not found. **Rename handling:** when the title changes, the slug-keyed path moves; after writing the new file, if the new path differs from the existing file's path, delete the old file so the same id never has two files.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -855,7 +855,21 @@ test("throws on unknown id", () => {
   baInit({ projectRoot: root });
   expect(() => baUpdateArtifact({ projectRoot: root, id: "US-999" })).toThrow();
 });
+
+test("renaming the title moves the file and removes the orphan", () => {
+  const root = mkdtempSync(join(tmpdir(), "ba-"));
+  baInit({ projectRoot: root });
+  const c = baCreateArtifact({ projectRoot: root, type: "story", title: "Reset", updated: "2026-06-18" } as any);
+  const u = baUpdateArtifact({ projectRoot: root, id: c.id, title: "Reset Password", updated: "2026-06-19" });
+  expect(u.filePath).not.toBe(c.filePath);
+  expect(existsSync(c.filePath)).toBe(false);                  // old file removed
+  expect(existsSync(u.filePath)).toBe(true);                   // new file present
+  const stories = listArtifacts(join(root, "docs/ba")).filter(a => a.frontmatter.id === c.id);
+  expect(stories).toHaveLength(1);                             // id still unique
+});
 ```
+
+Note: import `existsSync` from `node:fs` and `listArtifacts` from `../../src/core/store.js` at the top of the test.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -876,6 +890,7 @@ export function appendChangelog(docsRoot: string, line: string): void {
 - [ ] **Step 4: Write `src/tools/baUpdateArtifact.ts`**
 
 ```ts
+import { rmSync } from "node:fs";
 import { z } from "zod";
 import { resolveConfig } from "../config.js";
 import { listArtifacts, writeArtifact } from "../core/store.js";
@@ -908,6 +923,8 @@ export function baUpdateArtifact(input: z.infer<typeof baUpdateSchema>): { id: s
   fm.updated = input.updated ?? new Date().toISOString().slice(0, 10);
 
   const filePath = writeArtifact({ frontmatter: fm, body }, docsRoot);
+  // A title change moves the slug-keyed path; remove the orphaned old file so one id == one file.
+  if (filePath !== existing.filePath) rmSync(existing.filePath, { force: true });
   appendChangelog(docsRoot, `${fm.updated} ${fm.id} v${fm.version}: changed ${changed.join(", ") || "metadata"}`);
   return { id: fm.id, filePath, version: fm.version };
 }
