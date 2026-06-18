@@ -1,0 +1,10 @@
+- topic: problem
+  text: "In one or two sentences, what problem does this product solve and for whom?"
+- topic: scope
+  text: "What is explicitly in scope for the first version, and what is explicitly out of scope?"
+- topic: users
+  text: "Who are the main types of users or roles that will interact with the system?"
+- topic: success
+  text: "How will you know this is successful? What outcome or metric matters most?"
+- topic: constraints
+  text: "Are there hard constraints — deadlines, platforms, regulations, or systems it must integrate with?"
