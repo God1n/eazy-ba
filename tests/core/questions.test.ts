@@ -28,3 +28,14 @@ test("domainQuestions emits checklist dimensions for a story", () => {
   expect(qs.some(q => /actor/i.test(q.text))).toBe(true);
   expect(qs.length).toBeGreaterThanOrEqual(4);
 });
+
+test("domainQuestions skips dimensions already answered by a decision with matching topic", () => {
+  const story = art({ id: "US-001", type: "story" });
+  const decision: Frontmatter = {
+    id: "DEC-001", type: "decision", title: "q", status: "approved", version: 1, updated: "d", topic: "US-001#0",
+  };
+  const allQs = domainQuestions([story]);
+  const filteredQs = domainQuestions([story], [decision]);
+  expect(filteredQs.length).toBeLessThan(allQs.length);
+  expect(filteredQs.every(q => q.topic !== "US-001#0")).toBe(true);
+});

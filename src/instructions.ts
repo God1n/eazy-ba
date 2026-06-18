@@ -5,7 +5,7 @@ Workflow (a loop):
 1. Call ba_session_start with mode "discovery" (new project) or "stabilize" (tighten an existing one).
 2. Call ba_assess to get the prioritized questions. It creates nothing.
 3. Ask the user those questions, in focused rounds. Surface round first (scope), then domain depth, then gaps.
-4. Record their answers verbatim with ba_record_answers — this is the decision trail.
+4. Record their answers verbatim with ba_record_answers — this is the decision trail. When you record an answer with ba_record_answers, pass back that question's 'topic' and 'asked_round' values verbatim — this is how the BA tracks which points are covered and knows when it is done.
 5. Only then call ba_apply to write/update documents. Every artifact MUST cite the decisions it derives from
    (derived_from); ba_apply rejects any artifact backed by an unrecorded decision.
 6. Call ba_assess again and repeat until ba_status reports stable (no open questions, no gaps).
