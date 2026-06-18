@@ -38,10 +38,10 @@
 
 ```json
 {
-  "name": "ba-mcp",
+  "name": "eazy-ba",
   "version": "0.1.0",
   "type": "module",
-  "bin": { "ba-mcp": "dist/index.js" },
+  "bin": { "eazy-ba": "dist/index.js" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
@@ -1185,7 +1185,7 @@ function wrap(handler: Handler) {
 }
 
 export function buildServer(): McpServer {
-  const server = new McpServer({ name: "ba-mcp", version: VERSION });
+  const server = new McpServer({ name: "eazy-ba", version: VERSION });
   server.registerTool("ba_init",
     { description: "Scaffold the docs/ba BA docs tree.", inputSchema: baInitSchema.shape },
     wrap(baInit));
