@@ -10,10 +10,10 @@ export const VERSION = "0.1.0";
 
 type Handler = (args: any) => unknown;
 
-function wrap(handler: Handler) {
+export function wrap(handler: Handler) {
   return async (args: unknown) => {
     try {
-      const result = handler(args);
+      const result = await handler(args);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     } catch (err) {
       return {
