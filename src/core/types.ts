@@ -1,6 +1,6 @@
 export type ArtifactType =
   | "vision" | "glossary" | "persona" | "fr" | "nfr"
-  | "use-case" | "story" | "risk" | "assumption";
+  | "use-case" | "story" | "risk" | "assumption" | "decision";
 
 export type Status = "draft" | "reviewed" | "approved" | "implemented" | "obsolete";
 export type Priority = "must" | "should" | "could" | "wont";
@@ -14,6 +14,7 @@ export interface Frontmatter {
   implements?: string[];
   satisfies?: string[];
   refines?: string[];
+  derived_from?: string[];
   tags?: string[];
   version: number;
   updated: string;
@@ -28,8 +29,8 @@ export interface Artifact {
 
 export const ID_PREFIX: Record<ArtifactType, string> = {
   vision: "VIS", glossary: "GLO", persona: "PER", fr: "FR", nfr: "NFR",
-  "use-case": "UC", story: "US", risk: "RSK", assumption: "ASM",
+  "use-case": "UC", story: "US", risk: "RSK", assumption: "ASM", decision: "DEC",
 };
 
 export const FILE_BACKED_TYPES: ArtifactType[] =
-  ["persona", "fr", "nfr", "use-case", "story"];
+  ["persona", "fr", "nfr", "use-case", "story", "decision"];
