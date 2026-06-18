@@ -38,14 +38,17 @@ export function baApply(input: z.infer<typeof baApplySchema>): { applied: Array<
   if (!session) throw new Error("No active session. Call ba_session_start first.");
 
   const ledger = new Set(listDecisions(docsRoot).map(d => d.id));
+
+  // pre-flight: validate every cited decision across ALL specs before writing anything
+  const allDecIds = new Set(input.artifacts.flatMap(s => s.derived_from));
+  for (const dec of allDecIds) {
+    if (!ledger.has(dec)) throw new Error(`Unknown or unrecorded decision: ${dec}. Record the answer before applying.`);
+  }
+
   const applied: Array<{ id: string; op: string }> = [];
   const consumedDecisions = new Set<string>();
 
   for (const spec of input.artifacts) {
-    for (const dec of spec.derived_from) {
-      if (!ledger.has(dec)) throw new Error(`Unknown or unrecorded decision: ${dec}. Record the answer before applying.`);
-    }
-
     let artifactId: string;
     if (spec.op === "create") {
       if (!spec.type || !spec.title) throw new Error("create requires type and title");
@@ -57,6 +60,9 @@ export function baApply(input: z.infer<typeof baApplySchema>): { applied: Array<
       artifactId = created.id;
     } else {
       if (!spec.id) throw new Error("update requires id");
+      if (spec.implements || spec.satisfies || spec.refines) {
+        throw new Error("ba_apply update does not support changing implements/satisfies/refines yet; create the link via a new artifact or edit the file directly.");
+      }
       const updated = baUpdateArtifact({
         projectRoot: input.projectRoot, id: spec.id, title: spec.title,
         status: spec.status, priority: spec.priority, body: spec.body,
