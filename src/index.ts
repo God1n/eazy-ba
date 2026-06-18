@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { baInit, baInitSchema } from "./tools/baInit.js";
@@ -7,7 +9,7 @@ import { baUpdateArtifact, baUpdateSchema } from "./tools/baUpdateArtifact.js";
 import { baLink, baLinkSchema } from "./tools/baLink.js";
 import { baGet, baGetSchema, baList, baListSchema } from "./tools/baQuery.js";
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.1.1";
 
 type Handler = (args: any) => unknown;
 
@@ -53,7 +55,20 @@ async function main() {
   await server.connect(new StdioServerTransport());
 }
 
-// Run as binary when invoked directly.
-if (import.meta.url === `file://${process.argv[1]}`) {
+// True when this file is the process entry point — including when launched
+// through a symlinked bin (npx, global install, `claude mcp add`), where
+// process.argv[1] is the symlink path but import.meta.url is the resolved
+// real path. Resolving symlinks on both sides makes the comparison robust.
+export function invokedAsBinary(): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (invokedAsBinary()) {
   main().catch((e) => { console.error(e); process.exit(1); });
 }

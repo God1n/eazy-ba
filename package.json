@@ -1,6 +1,6 @@
 {
   "name": "eazy-ba",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A personal Business Analyst MCP server: requirement gathering, gap analysis, and BA documentation (user stories, requirements, traceability) as markdown.",
   "type": "module",
   "bin": { "eazy-ba": "dist/index.js" },

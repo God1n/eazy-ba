@@ -18,19 +18,18 @@ hand-maintained.
 
 ## Install
 
-```bash
-npm install -g eazy-ba
-```
-
-Or run without installing:
+Add it to Claude Code with one command — no global install needed:
 
 ```bash
-npx eazy-ba
+claude mcp add eazy-ba -- npx -y eazy-ba
 ```
 
-## Use with Claude Code
+That's it. `npx` fetches and runs the latest version on demand.
 
-Add it as an MCP server (stdio):
+<details>
+<summary>Other MCP clients (manual config)</summary>
+
+Register it as a stdio MCP server:
 
 ```json
 {
@@ -42,6 +41,7 @@ Add it as an MCP server (stdio):
   }
 }
 ```
+</details>
 
 ## The docs structure
 
