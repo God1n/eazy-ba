@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { buildServer, wrap } from "../src/index.js";
+import { buildServer, wrap, INSTRUCTIONS } from "../src/index.js";
 
 test("buildServer smoke test — builds without throwing", () => {
   const server = buildServer();
@@ -40,4 +40,11 @@ test("wrap — async handler that rejects resolves to isError shape (proves Fix 
     isError: true,
     content: [{ type: "text", text: "async failure" }],
   });
+});
+
+test("server exposes the loop tools and BA instructions", () => {
+  // buildServer should not throw and INSTRUCTIONS should describe the loop.
+  expect(typeof INSTRUCTIONS).toBe("string");
+  expect(INSTRUCTIONS).toMatch(/never/i);
+  expect(INSTRUCTIONS).toMatch(/ba_assess/);
 });

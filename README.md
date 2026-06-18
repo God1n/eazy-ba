@@ -12,9 +12,9 @@ Markdown files are the **single source of truth** — everything lives under
 stored in YAML frontmatter, so traceability is always derived, never
 hand-maintained.
 
-> **Status:** Phase 1 (foundation + core CRUD). The requirement-gathering and
-> documentation backbone is complete. Gap analysis, follow-up questioning,
-> linting, impact analysis, and elicitation are on the roadmap (see below).
+> **Status:** Phase A (interrogative loop). eazy-ba now conducts structured BA
+> interviews before writing anything — every requirement traces back to a
+> decision you made.
 
 ## Install
 
@@ -65,14 +65,29 @@ docs/ba/
 Stable IDs (`FR-001`, `US-001`, `PER-001`, …) are the backbone; cross-links live
 in frontmatter (`implements`, `satisfies`, `refines`).
 
-## Tools (Phase 1)
+## How it works — the interrogation loop
+
+eazy-ba behaves like a Business Analyst: it asks before it writes, and never assumes.
+
+1. `ba_session_start` — begin discovery (new project) or stabilize (tighten an existing one).
+2. `ba_assess` — returns the questions to ask you. It writes nothing.
+3. You answer; `ba_record_answers` saves each answer as a traceable decision (`DEC-###`).
+4. `ba_apply` — turns those decisions into documents. Every document cites the decisions behind it;
+   nothing is written without a recorded answer.
+5. Repeat until `ba_status` reports **stable** (no open questions, no gaps).
+
+Every requirement, story, and acceptance criterion traces back to a decision you made.
+
+## Tools
 
 | Tool | Purpose |
 |------|---------|
 | `ba_init` | Scaffold the `docs/ba/` tree in a project. |
-| `ba_create_artifact` | Create a persona / FR / NFR / use-case / story (auto-allocates a stable ID; stories get a Gherkin acceptance-criteria stub). |
-| `ba_update_artifact` | Edit an artifact; bumps its version and appends to the changelog. Renames are handled safely. |
-| `ba_link` | Link artifacts via `implements` / `satisfies` / `refines`. |
+| `ba_session_start` | Start or resume a BA session (`mode: discovery \| stabilize`). |
+| `ba_assess` | Analyze current state; return prioritized questions to ask the user. Creates nothing. |
+| `ba_record_answers` | Save the user's answers as traceable decisions (`DEC-###`). |
+| `ba_apply` | Materialize/update documents from recorded decisions. Rejects artifacts with no `derived_from`. |
+| `ba_status` | Report open questions, gaps, pending decisions, and overall stability. |
 | `ba_get` | Fetch one artifact by ID. |
 | `ba_list` | List/filter artifacts by type, status, priority, or tag. |
 
