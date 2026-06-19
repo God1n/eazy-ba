@@ -10,10 +10,11 @@ import { baAssess, baAssessSchema } from "./tools/baAssess.js";
 import { baRecordAnswers, baRecordAnswersSchema } from "./tools/baRecordAnswers.js";
 import { baApply, baApplySchema } from "./tools/baApply.js";
 import { baStatus, baStatusSchema } from "./tools/baStatus.js";
+import { baImpact, baImpactSchema } from "./tools/baImpact.js";
 import { INSTRUCTIONS } from "./instructions.js";
 
 export { INSTRUCTIONS } from "./instructions.js";
-export const VERSION = "0.2.0";
+export const VERSION = "0.3.0";
 
 type Handler = (args: any) => unknown;
 
@@ -45,6 +46,8 @@ export function buildServer(): McpServer {
     { description: "Materialize/update documents from recorded decisions. Every artifact must cite derived_from decisions.", inputSchema: baApplySchema.shape }, wrap(baApply));
   server.registerTool("ba_status",
     { description: "Report open questions, gaps, pending decisions, and stability.", inputSchema: baStatusSchema.shape }, wrap(baStatus));
+  server.registerTool("ba_impact",
+    { description: "For a mid-project change: report blast radius, conflicts, severity, consequences, and change questions for the given target ids. Creates nothing.", inputSchema: baImpactSchema.shape }, wrap(baImpact));
   server.registerTool("ba_get",
     { description: "Get one artifact by id.", inputSchema: baGetSchema.shape }, wrap(baGet));
   server.registerTool("ba_list",

@@ -11,4 +11,6 @@ Workflow (a loop):
 6. Call ba_assess again and repeat until ba_status reports stable (no open questions, no gaps).
 
 Never invent personas, requirements, or acceptance criteria the user did not give you. If something is unknown,
-it is a question, not an assumption.`;
+it is a question, not an assumption.
+
+For a change mid-project: start a session with mode "change", find the affected decision/artifact ids with ba_get/ba_list, then call ba_impact with those targets to see the blast radius, conflicts, severity, and consequences. Present the consequences and confirm with the user before committing. Record the change with ba_record_answers including supersedes:[<old decision ids>] so the prior decisions are marked obsolete, then ba_apply the updates. Re-run ba_assess until ba_status is stable again.`;
