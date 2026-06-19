@@ -36,3 +36,12 @@ export function domainQuestions(artifacts: Artifact[], decisions: Frontmatter[] 
   }
   return out;
 }
+
+export function changeQuestions(affectedArtifactIds: string[]): Question[] {
+  return affectedArtifactIds.map((id, i) => ({
+    ref: `Q-c${i + 1}`,
+    text: `How does the change affect ${id}? State exactly what must change and what stays the same.`,
+    topic: id,
+    round: "change",
+  }));
+}

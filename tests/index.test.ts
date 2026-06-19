@@ -48,3 +48,8 @@ test("server exposes the loop tools and BA instructions", () => {
   expect(INSTRUCTIONS).toMatch(/never/i);
   expect(INSTRUCTIONS).toMatch(/ba_assess/);
 });
+
+test("instructions describe change mode and ba_impact", () => {
+  expect(INSTRUCTIONS).toMatch(/change/i);
+  expect(INSTRUCTIONS).toMatch(/ba_impact/);
+});

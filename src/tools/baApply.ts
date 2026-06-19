@@ -44,6 +44,7 @@ export function baApply(input: z.infer<typeof baApplySchema>): { applied: Array<
   for (const spec of input.artifacts) {
     if (spec.op === "create") {
       if (!spec.type || !spec.title) throw new Error("create requires type and title");
+      if (spec.status) throw new Error("ba_apply create cannot set status; create as draft then update it.");
     } else {
       if (!spec.id) throw new Error("update requires id");
       if (spec.implements || spec.satisfies || spec.refines) {

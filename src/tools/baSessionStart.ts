@@ -5,7 +5,7 @@ import type { SessionState } from "../core/session.js";
 
 export const baSessionStartSchema = z.object({
   projectRoot: z.string(),
-  mode: z.enum(["discovery", "stabilize"]),
+  mode: z.enum(["discovery", "stabilize", "change"]),
 });
 
 export function baSessionStart(input: z.infer<typeof baSessionStartSchema>):
@@ -22,7 +22,7 @@ export function baSessionStart(input: z.infer<typeof baSessionStartSchema>):
   } else {
     state = {
       mode: input.mode,
-      round: input.mode === "discovery" ? "surface" : "gap",
+      round: input.mode === "discovery" ? "surface" : input.mode === "change" ? "change" : "gap",
       open_questions: [],
       pending_apply: [],
       updated: today,

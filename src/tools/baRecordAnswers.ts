@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveConfig } from "../config.js";
-import { recordDecision, listDecisions } from "../core/decisions.js";
+import { recordDecision, listDecisions, getDecision, supersede } from "../core/decisions.js";
 import { readSession, writeSession } from "../core/session.js";
 
 export const baRecordAnswersSchema = z.object({
@@ -8,9 +8,10 @@ export const baRecordAnswersSchema = z.object({
   items: z.array(z.object({
     question: z.string(),
     answer: z.string(),
-    asked_round: z.enum(["surface", "domain", "gap"]),
+    asked_round: z.enum(["surface", "domain", "gap", "change"]),
     topic: z.string(),
     ref: z.string().optional(),
+    supersedes: z.array(z.string()).optional(),
   })).min(1),
 });
 
@@ -19,6 +20,16 @@ export function baRecordAnswers(input: z.infer<typeof baRecordAnswersSchema>): {
   const session = readSession(docsRoot);
   if (!session) throw new Error("No active session. Call ba_session_start first.");
 
+  // Pre-flight validate all supersedes ids (exist and not already superseded),
+  // before recording anything, so a bad supersede leaves no partial state.
+  for (const item of input.items) {
+    for (const old of item.supersedes ?? []) {
+      const dec = getDecision(old, docsRoot);
+      if (!dec) throw new Error(`Cannot supersede unknown decision: ${old}`);
+      if (dec.status === "obsolete") throw new Error(`Cannot supersede an already-obsolete decision: ${old}`);
+    }
+  }
+
   // Dedupe by question ref so retries are idempotent: an item whose ref already
   // has a recorded decision is skipped rather than recorded twice.
   const seenRefs = new Set(listDecisions(docsRoot).map(d => d.ref as string | undefined).filter(Boolean));
@@ -26,8 +37,10 @@ export function baRecordAnswers(input: z.infer<typeof baRecordAnswersSchema>): {
   const skipped: string[] = [];
   for (const item of input.items) {
     if (item.ref && seenRefs.has(item.ref)) { skipped.push(item.ref); continue; }
-    recorded.push(recordDecision(item, docsRoot));
+    const newId = recordDecision(item, docsRoot);
+    recorded.push(newId);
     if (item.ref) seenRefs.add(item.ref);
+    for (const old of item.supersedes ?? []) supersede(old, newId, docsRoot);
   }
 
   // Clear answered open questions by ref when available, falling back to exact text.

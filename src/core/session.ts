@@ -6,12 +6,12 @@ export interface Question {
   ref: string;
   text: string;
   topic: string;
-  round: "surface" | "domain" | "gap";
+  round: "surface" | "domain" | "gap" | "change";
 }
 
 export interface SessionState {
-  mode: "discovery" | "stabilize";
-  round: "surface" | "domain" | "gap";
+  mode: "discovery" | "stabilize" | "change";
+  round: "surface" | "domain" | "gap" | "change";
   open_questions: Question[];
   pending_apply: string[];
   updated: string;
