@@ -8,6 +8,7 @@ export interface DecisionInput {
   asked_round: "surface" | "domain" | "gap" | "change";
   topic: string;
   ref?: string;
+  supersedes?: string[];
   updated?: string;
 }
 
@@ -29,6 +30,7 @@ export function recordDecision(input: DecisionInput, docsRoot: string): string {
     asked_round: input.asked_round,
     topic: input.topic,
     ...(input.ref ? { ref: input.ref } : {}),
+    ...(input.supersedes ? { supersedes: input.supersedes } : {}),
     applied: false,
     informs: [],
   };
@@ -53,6 +55,16 @@ export function markApplied(id: string, artifactIds: string[], docsRoot: string)
   const merged = new Set([...((fm.informs as string[] | undefined) ?? []), ...artifactIds]);
   fm.informs = [...merged];
   fm.applied = true;
+  fm.updated = today();
+  writeArtifact({ frontmatter: fm, body: artifact.body }, docsRoot);
+}
+
+export function supersede(oldId: string, newId: string, docsRoot: string): void {
+  const artifact = listArtifacts(docsRoot).find(a => a.frontmatter.id === oldId && a.frontmatter.type === "decision");
+  if (!artifact) throw new Error(`Decision not found: ${oldId}`);
+  const fm = { ...artifact.frontmatter };
+  fm.status = "obsolete";
+  fm.superseded_by = newId;
   fm.updated = today();
   writeArtifact({ frontmatter: fm, body: artifact.body }, docsRoot);
 }
