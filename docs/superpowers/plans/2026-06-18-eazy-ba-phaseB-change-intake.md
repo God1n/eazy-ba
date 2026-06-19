@@ -285,10 +285,12 @@ git commit -m "feat: add decision superseding (supersedes + supersede)"
   - `interface Impact { blastRadius: { artifacts: string[]; decisions: string[] }; conflicts: { reopened: string[]; contradicted: string[] }; severity: "low" | "medium" | "high" }`
   - `function buildImpact(targets: string[], artifacts: Artifact[], decisions: Frontmatter[]): Impact`
 
-Rules:
-- Seed affected artifacts: a target that is a decision id seeds that decision's `informs` artifact ids; a target that is an artifact id seeds itself.
+Rules (NOTE: during review M1 the seed edge was changed from decision `informs`
+to artifact `derived_from` — the user-authored authoritative link, robust to
+hand-edited files. The rules and code below reflect the shipped `derived_from` version):
+- Seed affected artifacts: a target that is a decision id seeds the artifacts whose `derived_from` cites it; a target that is an artifact id seeds itself.
 - Transitive closure: an artifact `x` is affected if any of its `implements`/`satisfies`/`refines` points to an already-affected artifact.
-- `blastRadius.artifacts` = the affected set. `blastRadius.decisions` = target decision ids plus non-obsolete decisions whose `informs` intersects the affected set (deduped).
+- `blastRadius.artifacts` = the affected set. `blastRadius.decisions` = target decision ids plus the non-obsolete decisions referenced by any affected artifact's `derived_from` (deduped).
 - `conflicts.reopened` = affected artifacts whose `status` is `approved` or `implemented`. `conflicts.contradicted` = targets that are decision ids.
 - `severity`: `high` if any reopened artifact is `implemented`; else `medium` if any reopened is `approved` OR `(blastRadius.artifacts.length + blastRadius.decisions.length) >= 5`; else `low`.
 
@@ -308,11 +310,11 @@ const dec = (fm: Partial<Frontmatter>): Frontmatter =>
 
 test("blast radius from a decision reaches its informed artifact and dependents", () => {
   const artifacts = [
-    art({ id: "FR-001", type: "fr", status: "approved" }),
+    art({ id: "FR-001", type: "fr", status: "approved", derived_from: ["DEC-001"] }),
     art({ id: "US-001", type: "story", implements: ["FR-001"], status: "implemented" }),
     art({ id: "US-002", type: "story", implements: ["FR-002"] }), // unrelated
   ];
-  const decisions = [dec({ id: "DEC-001", informs: ["FR-001"] })];
+  const decisions = [dec({ id: "DEC-001" })];
   const impact = buildImpact(["DEC-001"], artifacts, decisions);
   expect(impact.blastRadius.artifacts.sort()).toEqual(["FR-001", "US-001"]);
   expect(impact.blastRadius.decisions).toContain("DEC-001");
@@ -350,14 +352,17 @@ const EDGE_KINDS = ["implements", "satisfies", "refines"] as const;
 export function buildImpact(targets: string[], artifacts: Artifact[], decisions: Frontmatter[]): Impact {
   const artifactById = new Map(artifacts.map(a => [a.frontmatter.id, a]));
   const decisionById = new Map(decisions.map(d => [d.id, d]));
-  const targetSet = new Set(targets);
 
-  // Seed affected artifacts.
+  // Seed affected artifacts (decision target -> artifacts whose derived_from cites it).
   const affected = new Set<string>();
   for (const t of targets) {
     if (artifactById.has(t)) affected.add(t);
-    const d = decisionById.get(t);
-    if (d) for (const id of ((d.informs as string[] | undefined) ?? [])) if (artifactById.has(id)) affected.add(id);
+    if (decisionById.has(t)) {
+      for (const a of artifacts) {
+        const df = (a.frontmatter.derived_from as string[] | undefined) ?? [];
+        if (df.includes(t)) affected.add(a.frontmatter.id);
+      }
+    }
   }
 
   // Transitive closure over dependents (x depends on an affected id via its edges).
@@ -374,10 +379,12 @@ export function buildImpact(targets: string[], artifacts: Artifact[], decisions:
   const blastArtifacts = [...affected];
   const blastDecisions = new Set<string>();
   for (const t of targets) if (decisionById.has(t)) blastDecisions.add(t);
-  for (const d of decisions) {
-    if (d.status === "obsolete") continue;
-    const informs = (d.informs as string[] | undefined) ?? [];
-    if (informs.some(id => affected.has(id))) blastDecisions.add(d.id);
+  for (const a of artifacts) {
+    if (!affected.has(a.frontmatter.id)) continue;
+    for (const id of ((a.frontmatter.derived_from as string[] | undefined) ?? [])) {
+      const d = decisionById.get(id);
+      if (d && d.status !== "obsolete") blastDecisions.add(id);
+    }
   }
 
   const reopened = blastArtifacts.filter(id => {
@@ -541,9 +548,12 @@ function seedStory(root: string): string {
   baSessionStart({ projectRoot: root, mode: "discovery" });
   baRecordAnswers({ projectRoot: root, items: [{ question: "scope?", answer: "x", asked_round: "surface", topic: "scope" }] });
   const res = baApply({ projectRoot: root, artifacts: [
-    { op: "create", type: "story", title: "Login", body: "Given a When b Then c", status: "implemented", derived_from: ["DEC-001"] },
+    { op: "create", type: "story", title: "Login", body: "Given a When b Then c", derived_from: ["DEC-001"] },
   ] });
-  return res.applied[0].id;
+  const id = res.applied[0].id;
+  // baApply create always starts as draft; promote via update (create cannot set status).
+  baApply({ projectRoot: root, artifacts: [{ op: "update", id, status: "implemented", derived_from: ["DEC-001"] }] });
+  return id;
 }
 
 test("ba_impact reports blast radius, severity, consequences, and change questions", () => {

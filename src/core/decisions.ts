@@ -62,6 +62,11 @@ export function markApplied(id: string, artifactIds: string[], docsRoot: string)
 export function supersede(oldId: string, newId: string, docsRoot: string): void {
   const artifact = listArtifacts(docsRoot).find(a => a.frontmatter.id === oldId && a.frontmatter.type === "decision");
   if (!artifact) throw new Error(`Decision not found: ${oldId}`);
+  // Append-only: never overwrite an existing supersede link (that would lose the
+  // original audit trail). Idempotent if it already points at the same newId.
+  if (artifact.frontmatter.status === "obsolete" && artifact.frontmatter.superseded_by !== newId) {
+    throw new Error(`Decision ${oldId} is already superseded by ${artifact.frontmatter.superseded_by}; supersede its successor instead.`);
+  }
   const fm = { ...artifact.frontmatter };
   fm.status = "obsolete";
   fm.superseded_by = newId;

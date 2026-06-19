@@ -20,10 +20,13 @@ export function baRecordAnswers(input: z.infer<typeof baRecordAnswersSchema>): {
   const session = readSession(docsRoot);
   if (!session) throw new Error("No active session. Call ba_session_start first.");
 
-  // Pre-flight validate all supersedes ids
+  // Pre-flight validate all supersedes ids (exist and not already superseded),
+  // before recording anything, so a bad supersede leaves no partial state.
   for (const item of input.items) {
     for (const old of item.supersedes ?? []) {
-      if (!getDecision(old, docsRoot)) throw new Error(`Cannot supersede unknown decision: ${old}`);
+      const dec = getDecision(old, docsRoot);
+      if (!dec) throw new Error(`Cannot supersede unknown decision: ${old}`);
+      if (dec.status === "obsolete") throw new Error(`Cannot supersede an already-obsolete decision: ${old}`);
     }
   }
 

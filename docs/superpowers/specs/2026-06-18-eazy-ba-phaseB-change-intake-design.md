@@ -103,9 +103,11 @@ Pure module over parsed artifacts + decisions (mirrors `gaps.ts`):
 - `interface Impact { blastRadius: { artifacts: string[]; decisions: string[] }; conflicts: { reopened: string[]; contradicted: string[] }; severity: "low" | "medium" | "high" }`
 - `function buildImpact(targets: string[], artifacts: Artifact[], decisions: Frontmatter[]): Impact`
 - **Blast radius:** transitive closure from each target. A decision target seeds
-  its `informs` artifacts; an artifact target seeds itself. Walk reverse
-  `derived_from` (decision→artifacts) and `implements`/`satisfies`/`refines`
-  edges to collect dependents. Dedup; exclude `obsolete` decisions.
+  the artifacts whose `derived_from` cites it (the user-authored authoritative
+  edge, robust to hand-edited files); an artifact target seeds itself. Walk the
+  `implements`/`satisfies`/`refines` edges to collect dependents. `blastRadius.decisions`
+  = target decision ids plus the non-obsolete decisions referenced by any
+  affected artifact's `derived_from`. Dedup; exclude `obsolete` decisions.
 - **Conflicts:** `reopened` = affected artifacts with `status` `approved` or
   `implemented`; `contradicted` = target ids that are decisions.
 - **Severity:** `high` if any reopened artifact is `implemented`; `medium` if any
