@@ -11,11 +11,11 @@ const dec = (fm: Partial<Frontmatter>): Frontmatter =>
 
 test("blast radius from a decision reaches its informed artifact and dependents", () => {
   const artifacts = [
-    art({ id: "FR-001", type: "fr", status: "approved" }),
+    art({ id: "FR-001", type: "fr", status: "approved", derived_from: ["DEC-001"] }),
     art({ id: "US-001", type: "story", implements: ["FR-001"], status: "implemented" }),
     art({ id: "US-002", type: "story", implements: ["FR-002"] }), // unrelated
   ];
-  const decisions = [dec({ id: "DEC-001", informs: ["FR-001"] })];
+  const decisions = [dec({ id: "DEC-001" })];
   const impact = buildImpact(["DEC-001"], artifacts, decisions);
   expect(impact.blastRadius.artifacts.sort()).toEqual(["FR-001", "US-001"]);
   expect(impact.blastRadius.decisions).toContain("DEC-001");

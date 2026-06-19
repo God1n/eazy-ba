@@ -11,14 +11,17 @@ const EDGE_KINDS = ["implements", "satisfies", "refines"] as const;
 export function buildImpact(targets: string[], artifacts: Artifact[], decisions: Frontmatter[]): Impact {
   const artifactById = new Map(artifacts.map(a => [a.frontmatter.id, a]));
   const decisionById = new Map(decisions.map(d => [d.id, d]));
-  const targetSet = new Set(targets);
 
   // Seed affected artifacts.
   const affected = new Set<string>();
   for (const t of targets) {
     if (artifactById.has(t)) affected.add(t);
-    const d = decisionById.get(t);
-    if (d) for (const id of ((d.informs as string[] | undefined) ?? [])) if (artifactById.has(id)) affected.add(id);
+    if (decisionById.has(t)) {
+      for (const a of artifacts) {
+        const df = (a.frontmatter.derived_from as string[] | undefined) ?? [];
+        if (df.includes(t)) affected.add(a.frontmatter.id);
+      }
+    }
   }
 
   // Transitive closure over dependents (x depends on an affected id via its edges).
@@ -35,10 +38,12 @@ export function buildImpact(targets: string[], artifacts: Artifact[], decisions:
   const blastArtifacts = [...affected];
   const blastDecisions = new Set<string>();
   for (const t of targets) if (decisionById.has(t)) blastDecisions.add(t);
-  for (const d of decisions) {
-    if (d.status === "obsolete") continue;
-    const informs = (d.informs as string[] | undefined) ?? [];
-    if (informs.some(id => affected.has(id))) blastDecisions.add(d.id);
+  for (const a of artifacts) {
+    if (!affected.has(a.frontmatter.id)) continue;
+    for (const id of ((a.frontmatter.derived_from as string[] | undefined) ?? [])) {
+      const d = decisionById.get(id);
+      if (d && d.status !== "obsolete") blastDecisions.add(id);
+    }
   }
 
   const reopened = blastArtifacts.filter(id => {
