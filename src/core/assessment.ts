@@ -9,7 +9,7 @@ export interface Assessment { round: "surface" | "domain" | "gap"; questions: Qu
 
 export function computeAssessment(docsRoot: string, mode: "discovery" | "stabilize" | "change"): Assessment {
   const artifacts = listArtifacts(docsRoot).filter(a => a.frontmatter.type !== "decision");
-  const decisions = listDecisions(docsRoot);
+  const decisions = listDecisions(docsRoot).filter(d => d.status !== "obsolete");
   const gaps = detectGaps(artifacts);
   let round: Question["round"];
   let questions: Question[];
