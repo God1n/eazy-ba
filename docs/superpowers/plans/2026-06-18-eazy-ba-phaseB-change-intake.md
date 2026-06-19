@@ -841,9 +841,14 @@ test("change flow: impact → supersede → update → old decision obsolete", (
   baSessionStart({ projectRoot: root, mode: "discovery" });
   baRecordAnswers({ projectRoot: root, items: [{ question: "Auth?", answer: "password", asked_round: "surface", topic: "auth" }] }); // DEC-001
   const created = baApply({ projectRoot: root, artifacts: [
-    { op: "create", type: "story", title: "Sign in", body: "Given a When b Then c", status: "approved", derived_from: ["DEC-001"] },
+    { op: "create", type: "story", title: "Sign in", body: "Given a When b Then c", derived_from: ["DEC-001"] },
   ] });
   const usId = created.applied[0].id;
+  // baApply create always starts as draft; promote to approved via update so the
+  // change below reopens committed work (severity medium).
+  baApply({ projectRoot: root, artifacts: [
+    { op: "update", id: usId, status: "approved", derived_from: ["DEC-001"] },
+  ] });
 
   // Change: assess impact of changing DEC-001.
   baSessionStart({ projectRoot: root, mode: "change" });
