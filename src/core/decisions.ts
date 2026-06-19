@@ -5,7 +5,7 @@ import { writeArtifact, listArtifacts } from "./store.js";
 export interface DecisionInput {
   question: string;
   answer: string;
-  asked_round: "surface" | "domain" | "gap";
+  asked_round: "surface" | "domain" | "gap" | "change";
   topic: string;
   ref?: string;
   updated?: string;

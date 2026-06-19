@@ -8,7 +8,7 @@ export const baRecordAnswersSchema = z.object({
   items: z.array(z.object({
     question: z.string(),
     answer: z.string(),
-    asked_round: z.enum(["surface", "domain", "gap"]),
+    asked_round: z.enum(["surface", "domain", "gap", "change"]),
     topic: z.string(),
     ref: z.string().optional(),
   })).min(1),

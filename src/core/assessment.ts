@@ -7,7 +7,7 @@ import { surfaceQuestions, gapQuestions, domainQuestions } from "./questions.js"
 
 export interface Assessment { round: "surface" | "domain" | "gap"; questions: Question[]; gaps: Gap[]; stable: boolean }
 
-export function computeAssessment(docsRoot: string, mode: "discovery" | "stabilize"): Assessment {
+export function computeAssessment(docsRoot: string, mode: "discovery" | "stabilize" | "change"): Assessment {
   const artifacts = listArtifacts(docsRoot).filter(a => a.frontmatter.type !== "decision");
   const decisions = listDecisions(docsRoot);
   const gaps = detectGaps(artifacts);
