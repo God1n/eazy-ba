@@ -13,6 +13,7 @@ import { baStatus, baStatusSchema } from "./tools/baStatus.js";
 import { baPlan, baPlanSchema } from "./tools/baPlan.js";
 import { baFinalize, baFinalizeSchema } from "./tools/baFinalize.js";
 import { baImpact, baImpactSchema } from "./tools/baImpact.js";
+import { baGround, baGroundSchema } from "./tools/baGround.js";
 import { INSTRUCTIONS } from "./instructions.js";
 
 export { INSTRUCTIONS } from "./instructions.js";
@@ -39,7 +40,7 @@ export function buildServer(): McpServer {
   server.registerTool("ba_init",
     { description: "Scaffold the docs/ba BA docs tree.", inputSchema: baInitSchema.shape }, wrap(baInit));
   server.registerTool("ba_session_start",
-    { description: "Start or resume a BA session (mode: discovery | stabilize).", inputSchema: baSessionStartSchema.shape }, wrap(baSessionStart));
+    { description: "Start or resume a BA session (mode: discovery | stabilize | change | ground). For ground mode, pass readScope: the user-supplied paths/globs (relative to projectRoot) the BA may read; it is persisted to the session and bounds what ba_ground can auto-accept.", inputSchema: baSessionStartSchema.shape }, wrap(baSessionStart));
   server.registerTool("ba_assess",
     { description: "Analyze current state and return the questions to ask the user. Writes no BA documents (it only updates session state).", inputSchema: baAssessSchema.shape }, wrap(baAssess));
   server.registerTool("ba_record_answers",
@@ -54,6 +55,8 @@ export function buildServer(): McpServer {
     { description: "Promote every draft BA document (persona/fr/nfr/use-case/story/glossary/tech-surface) to status 'reviewed' in one batch — the clean 'here are your docs' step. Idempotent and repeatable: a second call with nothing in draft is a no-op, and it promotes again after a change loop re-opens work. Only changes status; never touches backing. Returns what was promoted.", inputSchema: baFinalizeSchema.shape }, wrap(baFinalize));
   server.registerTool("ba_impact",
     { description: "For a mid-project change: report blast radius, conflicts, severity, consequences, and change questions for the given target ids. Creates nothing.", inputSchema: baImpactSchema.shape }, wrap(baImpact));
+  server.registerTool("ba_ground",
+    { description: "Ground flow (ground session only): record code observations the host agent read. Each is { fact_kind, claim, anchors }. Auto-accepts ONLY existence facts the server can re-verify (entity-exists | dependency-present) whose anchors resolve on disk and sit inside the session read scope — recorded as confirmed/code-verified. Everything else (route/middleware/config-key, anything mislabeled, out-of-scope or unresolvable anchors) is recorded as an inferred+open observation that the user must confirm. Idempotent by (anchors+claim).", inputSchema: baGroundSchema.shape }, wrap(baGround));
   server.registerTool("ba_get",
     { description: "Get one artifact by id.", inputSchema: baGetSchema.shape }, wrap(baGet));
   server.registerTool("ba_list",

@@ -7,10 +7,15 @@ import { ModeEnum } from "../core/taxonomy.js";
 export const baSessionStartSchema = z.object({
   projectRoot: z.string(),
   mode: ModeEnum,
+  // Ground mode only: the USER-supplied read scope (paths/globs, relative to
+  // projectRoot) the user points the BA at. Persisted to the session so ba_ground
+  // can only auto-accept anchors inside it. Supplied at session start (a user turn),
+  // not freely per ba_ground call, so the agent can't widen it (Flow 2 R1/R11).
+  readScope: z.array(z.string()).optional(),
 });
 
 export function baSessionStart(input: z.infer<typeof baSessionStartSchema>):
-  { mode: string; round: string; resumed: boolean; next: string } {
+  { mode: string; round: string; resumed: boolean; readScope?: string[]; next: string } {
   const { docsRoot } = resolveConfig(input.projectRoot);
   const existing = readSession(docsRoot);
   const today = new Date().toISOString().slice(0, 10);
@@ -20,6 +25,9 @@ export function baSessionStart(input: z.infer<typeof baSessionStartSchema>):
   if (existing) {
     state = { ...existing, mode: input.mode, updated: today };
     resumed = true;
+    // A fresh readScope on resume replaces the prior one (the user re-points the
+    // BA); omitting it on resume preserves the persisted scope.
+    if (input.readScope !== undefined) state.read_scope = input.readScope;
   } else {
     state = {
       mode: input.mode,
@@ -27,9 +35,21 @@ export function baSessionStart(input: z.infer<typeof baSessionStartSchema>):
       open_questions: [],
       pending_apply: [],
       updated: today,
+      ...(input.mode === "ground" && input.readScope !== undefined
+        ? { read_scope: input.readScope }
+        : {}),
     };
     resumed = false;
   }
   writeSession(state, docsRoot);
-  return { mode: state.mode, round: state.round, resumed, next: "Call ba_assess to get the questions to ask the user." };
+  const next = state.mode === "ground"
+    ? "Call ba_assess to get the ground directive, then ba_ground with the code observations you can read."
+    : "Call ba_assess to get the questions to ask the user.";
+  return {
+    mode: state.mode,
+    round: state.round,
+    resumed,
+    ...(state.read_scope !== undefined ? { readScope: state.read_scope } : {}),
+    next,
+  };
 }

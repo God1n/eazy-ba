@@ -34,6 +34,11 @@ export interface Assessment {
   // that has passed surface but not yet declared any plan topics. Tells the host
   // agent to research the domain and call ba_plan. Never spammed once a plan exists.
   researchDirective?: string;
+  // Ground directive (Flow 2 R1/R2): present only in a ground session that has not
+  // yet recorded any observation. Tells the host agent to read the in-scope code
+  // and call ba_ground. Disappears once observations exist (which then surface as
+  // confirm-questions via Unit 3). Never makes a ground session vacuously stable.
+  groundDirective?: string;
 }
 
 const RESEARCH_DIRECTIVE =
@@ -41,6 +46,14 @@ const RESEARCH_DIRECTIVE =
   "declare the coverage topics worth eliciting beyond the floor. The plan is " +
   "visible to the user, who can add or retire topics. This is advisory — the " +
   "floor alone is a legitimately complete result if no further depth is needed.";
+
+const GROUND_DIRECTIVE =
+  "Ground session: read the code in the user-declared scope and call ba_ground " +
+  "with what you find — each observation is { fact_kind, claim, anchors }. The " +
+  "server auto-accepts only existence facts it can re-verify (entity-exists / " +
+  "dependency-present with resolving, in-scope anchors); everything else becomes " +
+  "an inferred observation the user must confirm. Do not put literal secret " +
+  "values in claims — anchors are path references only.";
 
 export function computeAssessment(docsRoot: string, mode: Mode): Assessment {
   // Two opposite memberships of one list:
@@ -119,6 +132,14 @@ export function computeAssessment(docsRoot: string, mode: Mode): Assessment {
       ? RESEARCH_DIRECTIVE
       : undefined;
 
+  // Ground directive (Flow 2 R1/R2): a ground session that has recorded no
+  // observation yet. Once any observation exists it disappears (the open inferred
+  // ones then carry the session via confirm-questions). A ground session with open
+  // inferred observations is therefore never vacuously stable.
+  const anyObservationEver = openItems.some(oi => oi.kind === "observation");
+  const groundDirective =
+    mode === "ground" && !anyObservationEver ? GROUND_DIRECTIVE : undefined;
+
   return {
     round,
     questions,
@@ -126,5 +147,6 @@ export function computeAssessment(docsRoot: string, mode: Mode): Assessment {
     stable: questions.length === 0 && gaps.length === 0,
     coveragePlan,
     ...(researchDirective ? { researchDirective } : {}),
+    ...(groundDirective ? { groundDirective } : {}),
   };
 }

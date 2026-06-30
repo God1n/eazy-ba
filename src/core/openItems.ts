@@ -86,7 +86,10 @@ export function createOrUpsertOpenItem(input: OpenItemInput, docsRoot: string): 
     ...(input.kind === "coverage-topic" ? { topic: input.topic } : {}),
     ...(input.kind === "observation"
       ? {
-          provenance: input.provenance,
+          // Omit provenance entirely when unset — an inferred+open observation has
+          // no provenance until the confirmation round fills it, and YAML cannot
+          // dump an `undefined` value.
+          ...(input.provenance !== undefined ? { provenance: input.provenance } : {}),
           fact_kind: input.fact_kind,
           anchors: input.anchors ?? [],
           claim: input.claim ?? "",

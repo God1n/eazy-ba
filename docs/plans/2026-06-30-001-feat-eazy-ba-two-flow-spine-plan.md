@@ -443,7 +443,7 @@ talks to the user) per `instructions.ts`.
 
 ### Phase 3 — Flow 2 (ba_ground Bootstrap)
 
-- [ ] **Unit 8: ba_ground tool + observation extraction + fact re-verification**
+- [x] **Unit 8: ba_ground tool + observation extraction + fact re-verification**
 
 **Goal:** New `ground` mode; record agent-supplied observations; auto-accept verifiable facts,
 route inferences to confirmation.
