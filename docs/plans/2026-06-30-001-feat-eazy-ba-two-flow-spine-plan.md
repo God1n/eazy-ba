@@ -256,7 +256,7 @@ zod enum style in `baSessionStart.ts`.
 **Verification:** `tsc` passes; grep finds the mode/round/`Question.round` literals only in
 `taxonomy.ts`; existing tests green.
 
-- [ ] **Unit 2: open-item store + idempotent identity**
+- [x] **Unit 2: open-item store + idempotent identity**
 
 **Goal:** CRUD and lifecycle for the unified open-item primitive.
 **Requirements:** F1-R2/R3 (coverage topics, idempotent), F2-R3/R10 (observations, stable identity, upsert).
