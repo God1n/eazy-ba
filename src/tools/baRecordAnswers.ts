@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resolveConfig } from "../config.js";
 import { recordDecision, listDecisions, getDecision, supersede } from "../core/decisions.js";
+import { listOpenItems, transitionOpenItem } from "../core/openItems.js";
 import { readSession, writeSession } from "../core/session.js";
 import { RoundEnum } from "../core/taxonomy.js";
 
@@ -42,6 +43,21 @@ export function baRecordAnswers(input: z.infer<typeof baRecordAnswersSchema>): {
     recorded.push(newId);
     if (item.ref) seenRefs.add(item.ref);
     for (const old of item.supersedes ?? []) supersede(old, newId, docsRoot);
+  }
+
+  // Retire the coverage-topic gate when its topic is answered. A coverage-topic
+  // open-item (floor:* or a declared plan topic) is keyed by its `topic`; recording
+  // a decision against that topic answers it, so transition the matching open item
+  // to "answered" — it then stops gating stability on the next computeAssessment.
+  // This is what makes the floor (Unit 5) answerable through the normal answer path
+  // and lets floor-only discovery converge (R5b). Idempotent: transitioning an
+  // already-answered (or terminal) item is a no-op / safely guarded.
+  const answeredTopics = new Set(input.items.map(i => i.topic));
+  for (const oi of listOpenItems(docsRoot)) {
+    if (oi.kind !== "coverage-topic" || oi.item_state !== "open") continue;
+    if (answeredTopics.has(oi.topic as string)) {
+      transitionOpenItem(oi.id as string, "answered", docsRoot);
+    }
   }
 
   // Clear answered open questions by ref when available, falling back to exact text.

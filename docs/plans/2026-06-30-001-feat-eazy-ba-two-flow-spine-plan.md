@@ -360,7 +360,7 @@ backing; descriptive ones do; applied open-items stop gating.
 
 ### Phase 2 — Flow 1 (Research + Deep Round)
 
-- [ ] **Unit 5: the floor (rich, artifact-independent, topic-keyed)**
+- [x] **Unit 5: the floor (rich, artifact-independent, topic-keyed)**
 
 **Goal:** A broad baseline of floor open-items seeded at deep-round entry.
 **Requirements:** F1-R5a/R5b/R6.
