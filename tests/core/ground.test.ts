@@ -73,14 +73,16 @@ test("anchorsAllVerify: every anchor must resolve + be in scope", () => {
   expect(anchorsAllVerify(["src/app.ts", "secrets/.env"], root, ["src/**"])).toBe(false);
 });
 
-test("verifyAnchor (basic, Unit 8): logical prefix is used; Unit 9 hardens with realpath", () => {
-  // A symlink whose target is in scope resolves through the logical path here.
-  // This documents that Unit 8 does NOT yet defeat symlink escape (Unit 9 will).
+test("verifyAnchor (Unit 9): a symlink whose realpath escapes scope is rejected", () => {
+  // A symlink that LIVES in src/ (so the logical prefix passes) but whose target
+  // is the out-of-scope secrets/.env. Unit 8's logical-prefix check accepted this;
+  // Unit 9 canonicalizes with realpath, so the escape is now caught (inScope=false).
   const root = project();
   const linkPath = join(root, "src", "link.ts");
   symlinkSync(join(root, "secrets", ".env"), linkPath);
   const v = verifyAnchor("src/link.ts", root, ["src/**"]);
-  // Logical path src/link.ts is inside scope and the symlink target exists.
+  // The target resolves on disk, but its realpath is outside the declared scope.
   expect(v.resolves).toBe(true);
-  expect(v.inScope).toBe(true);
+  expect(v.inScope).toBe(false);
+  expect(v.ok).toBe(false);
 });

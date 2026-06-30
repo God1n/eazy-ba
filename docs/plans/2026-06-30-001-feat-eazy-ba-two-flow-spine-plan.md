@@ -484,7 +484,7 @@ route inferences to confirmation.
 **Verification:** facts auto-accept only for existence-class, server-re-verified claims; everything
 else requires confirmation.
 
-- [ ] **Unit 9: server-enforced security boundary**
+- [x] **Unit 9: server-enforced security boundary**
 
 **Goal:** Make the read boundary structural where the server can, on the boundary it owns.
 **Requirements:** F2-R1/R11; threat-model items.

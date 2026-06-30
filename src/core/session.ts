@@ -22,6 +22,11 @@ export interface SessionState {
   // so a prompt-injected agent cannot unilaterally broaden what it may anchor.
   // ba_ground reads this; it is the auto-accept containment boundary.
   read_scope?: string[];
+  // Ground mode only (Unit 9): project-specific deny patterns ADDED to the
+  // built-in scopeGuard deny-list (e.g. `config/credentials.yml`). Supplied by
+  // the user at ba_session_start, so a prompt-injected agent cannot remove a
+  // project's secret path from the deny-list. Never anchored / never auto-accepted.
+  read_deny?: string[];
 }
 
 export function sessionPath(docsRoot: string): string {

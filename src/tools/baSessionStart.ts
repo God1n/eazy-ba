@@ -12,6 +12,10 @@ export const baSessionStartSchema = z.object({
   // can only auto-accept anchors inside it. Supplied at session start (a user turn),
   // not freely per ba_ground call, so the agent can't widen it (Flow 2 R1/R11).
   readScope: z.array(z.string()).optional(),
+  // Ground mode only (Unit 9): project-specific deny patterns ADDED to the
+  // built-in scopeGuard deny-list. User-supplied at session start so the agent
+  // cannot remove a project's secret path from the deny-list.
+  readDeny: z.array(z.string()).optional(),
 });
 
 export function baSessionStart(input: z.infer<typeof baSessionStartSchema>):
@@ -28,6 +32,7 @@ export function baSessionStart(input: z.infer<typeof baSessionStartSchema>):
     // A fresh readScope on resume replaces the prior one (the user re-points the
     // BA); omitting it on resume preserves the persisted scope.
     if (input.readScope !== undefined) state.read_scope = input.readScope;
+    if (input.readDeny !== undefined) state.read_deny = input.readDeny;
   } else {
     state = {
       mode: input.mode,
@@ -37,6 +42,9 @@ export function baSessionStart(input: z.infer<typeof baSessionStartSchema>):
       updated: today,
       ...(input.mode === "ground" && input.readScope !== undefined
         ? { read_scope: input.readScope }
+        : {}),
+      ...(input.mode === "ground" && input.readDeny !== undefined
+        ? { read_deny: input.readDeny }
         : {}),
     };
     resumed = false;

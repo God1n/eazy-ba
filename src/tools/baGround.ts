@@ -5,6 +5,7 @@ import { createOrUpsertOpenItem, getOpenItem } from "../core/openItems.js";
 import { CLOSED_FACT_KINDS, FactKindEnum } from "../core/taxonomy.js";
 import type { FactKind } from "../core/taxonomy.js";
 import { anchorsAllVerify } from "../core/ground.js";
+import { scanForSecrets } from "../core/scopeGuard.js";
 
 // ba_ground (Flow 2 R1/R2/R3/R4/R10) — the ONLY tool that touches code. The host
 // agent reads the project (the server cannot parse code) and supplies observations;
@@ -66,6 +67,26 @@ export function baGround(input: z.infer<typeof baGroundSchema>): BaGroundResult 
   // Scope is the user-declared boundary from ba_session_start. Absent scope means
   // nothing is in scope, so every observation fails safe to inferred.
   const scope = session.read_scope ?? [];
+  // User-extensible deny-list (Unit 9): project-specific secret paths ADDED to
+  // scopeGuard's built-in deny-list, supplied at session start.
+  const guardOpts = { extraDeny: session.read_deny ?? [] };
+
+  // Best-effort body secret-scan (Unit 9) — defense-in-depth, NOT a guarantee
+  // (high false-negative rate; see scopeGuard.ts). The agent is instructed never
+  // to put literal secret values in an observation body; this is the backstop.
+  // We scan the whole batch FIRST and reject atomically, so a body carrying a
+  // raw secret is never persisted to the (gitignored) open-item store. The
+  // load-bearing guarantee remains the path deny-list + realpath scope, not this.
+  for (const obs of input.observations) {
+    const hits = scanForSecrets(obs.claim);
+    if (hits.length > 0) {
+      throw new Error(
+        `ba_ground rejected an observation: its claim appears to contain a raw secret ` +
+          `(${hits.map(h => h.pattern).join(", ")}). Anchors are structural path references — ` +
+          `never paste literal secret values into an observation body; reference the path instead.`,
+      );
+    }
+  }
 
   const recorded: GroundedObservation[] = [];
 
@@ -74,9 +95,11 @@ export function baGround(input: z.infer<typeof baGroundSchema>): BaGroundResult 
     const anchors = obs.anchors.map(a => a.trim()).filter(Boolean);
 
     // Auto-accept gate: CLOSED fact_kind AND every anchor re-verifies (resolves +
-    // in scope). The label alone is never trusted — re-verification is required.
+    // in scope + not deny-listed, realpath-backed via scopeGuard). The label alone
+    // is never trusted — re-verification is required.
     const labelAutoAcceptable = CLOSED.has(obs.fact_kind);
-    const verified = labelAutoAcceptable && anchorsAllVerify(anchors, input.projectRoot, scope);
+    const verified =
+      labelAutoAcceptable && anchorsAllVerify(anchors, input.projectRoot, scope, guardOpts);
 
     // Idempotent upsert by (anchors+claim). createOrUpsertOpenItem returns the
     // existing id and writes nothing on a re-run, so a previously confirmed or
