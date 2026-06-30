@@ -418,7 +418,7 @@ talks to the user) per `instructions.ts`.
   research directive (not the domain round) and is not vacuously stable.
 **Verification:** the deep round is the union set; plan is visible and steerable; converges.
 
-- [ ] **Unit 7: ba_finalize + soft off-ramp**
+- [x] **Unit 7: ba_finalize + soft off-ramp**
 
 **Goal:** Promote drafts to review-ready; offer "good enough" stop past the floor.
 **Requirements:** F1-R9/R10/R12.

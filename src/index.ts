@@ -11,6 +11,7 @@ import { baRecordAnswers, baRecordAnswersSchema } from "./tools/baRecordAnswers.
 import { baApply, baApplySchema } from "./tools/baApply.js";
 import { baStatus, baStatusSchema } from "./tools/baStatus.js";
 import { baPlan, baPlanSchema } from "./tools/baPlan.js";
+import { baFinalize, baFinalizeSchema } from "./tools/baFinalize.js";
 import { baImpact, baImpactSchema } from "./tools/baImpact.js";
 import { INSTRUCTIONS } from "./instructions.js";
 
@@ -49,6 +50,8 @@ export function buildServer(): McpServer {
     { description: "Report open questions, gaps, pending decisions, the open coverage plan, and stability.", inputSchema: baStatusSchema.shape }, wrap(baStatus));
   server.registerTool("ba_plan",
     { description: "Declare or retire agent/user coverage topics (the visible, steerable coverage plan on top of the floor). Declaring is idempotent; retiring stops a topic from gating stability. Returns the current open plan.", inputSchema: baPlanSchema.shape }, wrap(baPlan));
+  server.registerTool("ba_finalize",
+    { description: "Promote every draft BA document (persona/fr/nfr/use-case/story/glossary/tech-surface) to status 'reviewed' in one batch — the clean 'here are your docs' step. Idempotent and repeatable: a second call with nothing in draft is a no-op, and it promotes again after a change loop re-opens work. Only changes status; never touches backing. Returns what was promoted.", inputSchema: baFinalizeSchema.shape }, wrap(baFinalize));
   server.registerTool("ba_impact",
     { description: "For a mid-project change: report blast radius, conflicts, severity, consequences, and change questions for the given target ids. Creates nothing.", inputSchema: baImpactSchema.shape }, wrap(baImpact));
   server.registerTool("ba_get",

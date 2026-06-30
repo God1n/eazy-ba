@@ -15,6 +15,7 @@ Workflow (a loop):
 5. Only then call ba_apply to write/update documents. Every artifact MUST cite the decisions it derives from
    (derived_from); ba_apply rejects any artifact backed by an unrecorded decision.
 6. Call ba_assess again and repeat until ba_status reports stable (no open questions, no gaps).
+7. Once the floor is fully answered, ba_status surfaces an off-ramp ("essentials covered — finalize or continue?"). This is a soft stop, not a wall: the floor alone is a legitimately complete result, so you may finalize there or keep going for more depth. When the docs are ready, call ba_finalize — it promotes every draft document to "reviewed" in one batch so the user has a clean set to review. ba_finalize is idempotent and repeatable: re-running it after a mid-project change loop re-opens work just promotes the new drafts.
 
 Never invent personas, requirements, or acceptance criteria the user did not give you. If something is unknown,
 it is a question, not an assumption.
