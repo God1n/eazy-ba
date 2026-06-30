@@ -1,7 +1,8 @@
 import type { Frontmatter } from "./types.js";
-import type { Round } from "./taxonomy.js";
+import type { Round, Provenance } from "./taxonomy.js";
 import { nextId } from "./ids.js";
 import { writeArtifact, listArtifacts } from "./store.js";
+import { transitionOpenItem } from "./openItems.js";
 
 export interface DecisionInput {
   question: string;
@@ -11,6 +12,12 @@ export interface DecisionInput {
   ref?: string;
   supersedes?: string[];
   updated?: string;
+  /**
+   * Backing provenance. Defaults to "user-decided" so every normally-recorded
+   * answer is a deliberate decision (existing flows unchanged). Unit 10 passes
+   * "corrected" / "confirmed-as-inferred" for the confirmation round.
+   */
+  provenance?: Provenance;
 }
 
 function today(): string {
@@ -30,6 +37,7 @@ export function recordDecision(input: DecisionInput, docsRoot: string): string {
     answer: input.answer,
     asked_round: input.asked_round,
     topic: input.topic,
+    provenance: input.provenance ?? "user-decided",
     ...(input.ref ? { ref: input.ref } : {}),
     ...(input.supersedes ? { supersedes: input.supersedes } : {}),
     applied: false,
@@ -49,9 +57,24 @@ export function getDecision(id: string, docsRoot: string): Frontmatter | undefin
   return listDecisions(docsRoot).find(d => d.id === id);
 }
 
+// Mark a backing applied. The backing may be a recorded decision OR an open-item
+// (kind:observation) — observation-backed artifacts must not hit a decisions-only
+// throw. Decision behaviour is identical to before (merge informs + applied:true).
+// Marking an open-item transitions its item_state to "applied" so it STOPS gating
+// stability on the next computeAssessment (a CLOSED fact backing a descriptive
+// artifact must not stay `open` forever).
 export function markApplied(id: string, artifactIds: string[], docsRoot: string): void {
-  const artifact = listArtifacts(docsRoot).find(a => a.frontmatter.id === id && a.frontmatter.type === "decision");
-  if (!artifact) throw new Error(`Decision not found: ${id}`);
+  const artifact = listArtifacts(docsRoot).find(a => a.frontmatter.id === id);
+  if (!artifact) throw new Error(`Backing not found: ${id}`);
+
+  if (artifact.frontmatter.type === "open-item") {
+    transitionOpenItem(id, "applied", docsRoot);
+    return;
+  }
+
+  if (artifact.frontmatter.type !== "decision") {
+    throw new Error(`Cannot mark ${id} applied: not a decision or open-item.`);
+  }
   const fm = { ...artifact.frontmatter };
   const merged = new Set([...((fm.informs as string[] | undefined) ?? []), ...artifactIds]);
   fm.informs = [...merged];

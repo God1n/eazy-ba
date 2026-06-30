@@ -319,7 +319,7 @@ class of bug the origin specs flag as only catchable across calls).
 - Integration: `ba_assess` and `ba_status` (both call `computeAssessment`) report identical stability.
 **Verification:** convergence reachable; no open-item state leaves `stable` reported true.
 
-- [ ] **Unit 4: provenance-extended ba_apply gate (fact≠requirement)**
+- [x] **Unit 4: provenance-extended ba_apply gate (fact≠requirement)**
 
 **Goal:** Admit code-verified observation backing safely; preserve anti-assumption.
 **Requirements:** F2-R4 (gate invariant, fact≠requirement), F1-R9 (drafts gated per-apply).
