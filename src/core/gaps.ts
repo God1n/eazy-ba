@@ -1,12 +1,20 @@
 import type { Artifact } from "./types.js";
+import { DESCRIPTIVE_TYPES } from "./types.js";
 import { buildGraph } from "./graph.js";
 
 export interface Gap { kind: string; subject: string; message: string }
 
 const TRACED_TYPES = new Set(["persona", "fr", "nfr", "use-case", "story"]);
 
-export function detectGaps(artifacts: Artifact[]): Gap[] {
+// Descriptive (tech-surface/glossary) and open-item artifacts are not normative
+// as-is docs: they must not be flagged untraced or fed into fr-without-story
+// reasoning. computeAssessment already filters them out of the artifact list;
+// this guard keeps detectGaps correct even if called with an unfiltered list.
+const NON_GAP_TYPES = new Set<string>(["open-item", ...DESCRIPTIVE_TYPES]);
+
+export function detectGaps(artifactsIn: Artifact[]): Gap[] {
   const gaps: Gap[] = [];
+  const artifacts = artifactsIn.filter(a => !NON_GAP_TYPES.has(a.frontmatter.type));
   const stories = artifacts.filter(a => a.frontmatter.type === "story");
 
   for (const a of artifacts) {

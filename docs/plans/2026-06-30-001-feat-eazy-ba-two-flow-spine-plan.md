@@ -279,7 +279,7 @@ zod enum style in `baSessionStart.ts`.
 - Error: transition from a terminal state (rejected→open) is refused.
 **Verification:** open-items round-trip to disk and recompute identically from disk.
 
-- [ ] **Unit 3: computeAssessment reads open-items + stability/vacuity fix**
+- [x] **Unit 3: computeAssessment reads open-items + stability/vacuity fix**
 
 **Goal:** Open-items gate stability; new modes don't fall into vacuous-stable.
 **Requirements:** F1-R5/R5a/R7/R12, F2-R4 (gate visibility), fixes the vacuous-stability trap.
