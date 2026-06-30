@@ -10,6 +10,7 @@ const FOLDER: Record<ArtifactType, string> = {
   "use-case": "04-use-cases", story: "05-stories",
   risk: "06-analysis", assumption: "06-analysis",
   decision: "08-decisions",
+  "open-item": "09-open-items", "tech-surface": "10-tech-surface",
 };
 
 export function folderFor(type: ArtifactType, docsRoot: string): string {

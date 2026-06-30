@@ -222,7 +222,7 @@ ba_apply gate (extended):
 
 ### Phase 1 — Shared Spine
 
-- [ ] **Unit 1: Centralized taxonomy + new artifact/provenance types**
+- [x] **Unit 1: Centralized taxonomy + new artifact/provenance types**
 
 **Goal:** One source of truth for the mode/round/kind/provenance unions; register the new
 artifact types and the closed fact set.

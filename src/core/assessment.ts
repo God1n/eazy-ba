@@ -4,10 +4,11 @@ import { listArtifacts } from "./store.js";
 import { listDecisions } from "./decisions.js";
 import { detectGaps } from "./gaps.js";
 import { surfaceQuestions, gapQuestions, domainQuestions, changeQuestions } from "./questions.js";
+import type { Mode, Round } from "./taxonomy.js";
 
-export interface Assessment { round: "surface" | "domain" | "gap" | "change"; questions: Question[]; gaps: Gap[]; stable: boolean }
+export interface Assessment { round: Round; questions: Question[]; gaps: Gap[]; stable: boolean }
 
-export function computeAssessment(docsRoot: string, mode: "discovery" | "stabilize" | "change"): Assessment {
+export function computeAssessment(docsRoot: string, mode: Mode): Assessment {
   const artifacts = listArtifacts(docsRoot).filter(a => a.frontmatter.type !== "decision");
   const allDecisions = listDecisions(docsRoot);
   const decisions = allDecisions.filter(d => d.status !== "obsolete");

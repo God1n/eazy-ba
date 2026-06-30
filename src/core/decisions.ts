@@ -1,11 +1,12 @@
 import type { Frontmatter } from "./types.js";
+import type { Round } from "./taxonomy.js";
 import { nextId } from "./ids.js";
 import { writeArtifact, listArtifacts } from "./store.js";
 
 export interface DecisionInput {
   question: string;
   answer: string;
-  asked_round: "surface" | "domain" | "gap" | "change";
+  asked_round: Round;
   topic: string;
   ref?: string;
   supersedes?: string[];

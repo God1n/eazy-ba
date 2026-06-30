@@ -2,10 +2,11 @@ import { z } from "zod";
 import { resolveConfig } from "../config.js";
 import { readSession, writeSession } from "../core/session.js";
 import type { SessionState } from "../core/session.js";
+import { ModeEnum } from "../core/taxonomy.js";
 
 export const baSessionStartSchema = z.object({
   projectRoot: z.string(),
-  mode: z.enum(["discovery", "stabilize", "change"]),
+  mode: ModeEnum,
 });
 
 export function baSessionStart(input: z.infer<typeof baSessionStartSchema>):

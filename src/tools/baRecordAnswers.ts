@@ -2,13 +2,14 @@ import { z } from "zod";
 import { resolveConfig } from "../config.js";
 import { recordDecision, listDecisions, getDecision, supersede } from "../core/decisions.js";
 import { readSession, writeSession } from "../core/session.js";
+import { RoundEnum } from "../core/taxonomy.js";
 
 export const baRecordAnswersSchema = z.object({
   projectRoot: z.string(),
   items: z.array(z.object({
     question: z.string(),
     answer: z.string(),
-    asked_round: z.enum(["surface", "domain", "gap", "change"]),
+    asked_round: RoundEnum,
     topic: z.string(),
     ref: z.string().optional(),
     supersedes: z.array(z.string()).optional(),

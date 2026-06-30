@@ -1,17 +1,18 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse, stringify } from "yaml";
+import type { Mode, Round } from "./taxonomy.js";
 
 export interface Question {
   ref: string;
   text: string;
   topic: string;
-  round: "surface" | "domain" | "gap" | "change";
+  round: Round;
 }
 
 export interface SessionState {
-  mode: "discovery" | "stabilize" | "change";
-  round: "surface" | "domain" | "gap" | "change";
+  mode: Mode;
+  round: Round;
   open_questions: Question[];
   pending_apply: string[];
   updated: string;
