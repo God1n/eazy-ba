@@ -10,6 +10,7 @@ import { baAssess, baAssessSchema } from "./tools/baAssess.js";
 import { baRecordAnswers, baRecordAnswersSchema } from "./tools/baRecordAnswers.js";
 import { baApply, baApplySchema } from "./tools/baApply.js";
 import { baStatus, baStatusSchema } from "./tools/baStatus.js";
+import { baPlan, baPlanSchema } from "./tools/baPlan.js";
 import { baImpact, baImpactSchema } from "./tools/baImpact.js";
 import { INSTRUCTIONS } from "./instructions.js";
 
@@ -45,7 +46,9 @@ export function buildServer(): McpServer {
   server.registerTool("ba_apply",
     { description: "Materialize/update documents from recorded decisions. Every artifact must cite derived_from decisions.", inputSchema: baApplySchema.shape }, wrap(baApply));
   server.registerTool("ba_status",
-    { description: "Report open questions, gaps, pending decisions, and stability.", inputSchema: baStatusSchema.shape }, wrap(baStatus));
+    { description: "Report open questions, gaps, pending decisions, the open coverage plan, and stability.", inputSchema: baStatusSchema.shape }, wrap(baStatus));
+  server.registerTool("ba_plan",
+    { description: "Declare or retire agent/user coverage topics (the visible, steerable coverage plan on top of the floor). Declaring is idempotent; retiring stops a topic from gating stability. Returns the current open plan.", inputSchema: baPlanSchema.shape }, wrap(baPlan));
   server.registerTool("ba_impact",
     { description: "For a mid-project change: report blast radius, conflicts, severity, consequences, and change questions for the given target ids. Creates nothing.", inputSchema: baImpactSchema.shape }, wrap(baImpact));
   server.registerTool("ba_get",

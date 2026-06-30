@@ -20,7 +20,27 @@ const NON_ARTIFACT_CONSUMER_TYPES = new Set<ArtifactType>([
   "decision", "open-item", ...DESCRIPTIVE_TYPES,
 ]);
 
-export interface Assessment { round: Round; questions: Question[]; gaps: Gap[]; stable: boolean }
+export interface PlanTopic { topic: string; item_state: string }
+
+export interface Assessment {
+  round: Round;
+  questions: Question[];
+  gaps: Gap[];
+  stable: boolean;
+  // The OPEN agent/user coverage plan (non-floor coverage-topics), surfaced for
+  // visibility (Flow 1 R11) so the user can see what "done" is gated on.
+  coveragePlan?: PlanTopic[];
+  // Advisory research directive (Flow 1 R1): present only in a discovery session
+  // that has passed surface but not yet declared any plan topics. Tells the host
+  // agent to research the domain and call ba_plan. Never spammed once a plan exists.
+  researchDirective?: string;
+}
+
+const RESEARCH_DIRECTIVE =
+  "Deep round open: research the domain for this project, then call ba_plan to " +
+  "declare the coverage topics worth eliciting beyond the floor. The plan is " +
+  "visible to the user, who can add or retire topics. This is advisory — the " +
+  "floor alone is a legitimately complete result if no further depth is needed.";
 
 export function computeAssessment(docsRoot: string, mode: Mode): Assessment {
   // Two opposite memberships of one list:
@@ -79,5 +99,32 @@ export function computeAssessment(docsRoot: string, mode: Mode): Assessment {
       : "gap";
   }
 
-  return { round, questions, gaps, stable: questions.length === 0 && gaps.length === 0 };
+  // Visibility (R11): the OPEN agent/user coverage plan — non-floor coverage-topics.
+  const coveragePlan = openItems
+    .filter(
+      oi => oi.kind === "coverage-topic" && oi.item_state === "open" &&
+        typeof oi.topic === "string" && !(oi.topic as string).startsWith("floor:"),
+    )
+    .map(oi => ({ topic: oi.topic as string, item_state: oi.item_state as string }));
+
+  // Research directive (R1): only for a discovery session that has passed surface
+  // (decisions exist) but not yet declared any plan topic. Advisory, not spammed —
+  // it disappears as soon as the agent or user has declared a plan.
+  const anyPlanTopicEver = openItems.some(
+    oi => oi.kind === "coverage-topic" &&
+      typeof oi.topic === "string" && !(oi.topic as string).startsWith("floor:"),
+  );
+  const researchDirective =
+    mode === "discovery" && decisions.length > 0 && !anyPlanTopicEver
+      ? RESEARCH_DIRECTIVE
+      : undefined;
+
+  return {
+    round,
+    questions,
+    gaps,
+    stable: questions.length === 0 && gaps.length === 0,
+    coveragePlan,
+    ...(researchDirective ? { researchDirective } : {}),
+  };
 }

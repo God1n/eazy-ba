@@ -382,7 +382,7 @@ backing; descriptive ones do; applied open-items stop gating.
 - Edge: floor keys never match existing `artifactId#idx`/`artifactId` topics (back-compat).
 **Verification:** floor-only discovery converges; floor survives an empty project.
 
-- [ ] **Unit 6: ba_plan tool + research directive + deep-round assembly**
+- [x] **Unit 6: ba_plan tool + research directive + deep-round assembly**
 
 **Goal:** Agent declares/extends/retires a visible coverage plan; ba_assess emits the directive;
 deep round = floor ∪ plan ∪ gaps.
