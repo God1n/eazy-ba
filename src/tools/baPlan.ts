@@ -3,6 +3,8 @@ import { resolveConfig } from "../config.js";
 import {
   createOrUpsertOpenItem, transitionOpenItem, listOpenItems,
 } from "../core/openItems.js";
+import { isFloorTopic, isPlanTopic } from "../core/taxonomy.js";
+import type { PlanTopic } from "../core/assessment.js";
 
 // ba_plan — the host agent (or, via the same call, the user) declares, extends,
 // or retires a VISIBLE coverage plan on top of the floor (Flow 1 R2/R3/R4/R11).
@@ -37,8 +39,6 @@ export const baPlanSchema = z.object({
   operations: z.array(PlanOperation).min(1),
 });
 
-export interface PlanTopic { topic: string; item_state: string }
-
 export interface BaPlanResult {
   declared: string[];
   retired: string[];
@@ -52,12 +52,6 @@ export interface BaPlanResult {
   plan: PlanTopic[];
 }
 
-// A coverage-topic open-item is part of the agent/user plan iff its topic is not
-// a floor:* dimension (those are the floor's, seeded by ba_assess).
-function isPlanTopic(topic: unknown): topic is string {
-  return typeof topic === "string" && !topic.startsWith("floor:");
-}
-
 export function baPlan(input: z.infer<typeof baPlanSchema>): BaPlanResult {
   const { docsRoot } = resolveConfig(input.projectRoot);
 
@@ -67,7 +61,7 @@ export function baPlan(input: z.infer<typeof baPlanSchema>): BaPlanResult {
 
   for (const op of input.operations) {
     if (op.op === "declare") {
-      if (op.topic.startsWith("floor:")) {
+      if (isFloorTopic(op.topic)) {
         throw new Error(`Plan topics must not use the reserved floor:* namespace: "${op.topic}"`);
       }
       // Idempotent: if a coverage-topic with this topic already exists, no new

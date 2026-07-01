@@ -20,7 +20,9 @@ import { guardAnchor, anchorFilePart, type ScopeGuardOptions } from "./scopeGuar
 // so existing importers of ground.ts keep working.
 export { anchorFilePart };
 
-export interface AnchorVerification {
+// Module-private: the return shape of verifyAnchor. verifyAnchor stays exported
+// (tests import it) but nothing imports this type name, so it need not be public.
+interface AnchorVerification {
   anchor: string;
   resolves: boolean;
   inScope: boolean;

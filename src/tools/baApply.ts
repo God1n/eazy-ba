@@ -5,8 +5,9 @@ import { baUpdateArtifact } from "./baUpdateArtifact.js";
 import { listArtifacts, writeArtifact } from "../core/store.js";
 import { listDecisions, markApplied } from "../core/decisions.js";
 import { listOpenItems } from "../core/openItems.js";
+import { today } from "../core/ids.js";
 import { readSession, writeSession } from "../core/session.js";
-import { CLOSED_FACT_KINDS } from "../core/taxonomy.js";
+import { CLOSED_FACT_KINDS_SET } from "../core/taxonomy.js";
 import { NORMATIVE_TYPES } from "../core/types.js";
 import type { Frontmatter, ArtifactType } from "../core/types.js";
 import type { Provenance, FactKind } from "../core/taxonomy.js";
@@ -66,7 +67,7 @@ export function baApply(input: z.infer<typeof baApplySchema>): { applied: Array<
   function isBackableObservation(item: Frontmatter): boolean {
     if (item.kind !== "observation") return false;
     const factKind = item.fact_kind as FactKind | "inferred" | undefined;
-    const inClosedSet = factKind !== undefined && (CLOSED_FACT_KINDS as readonly string[]).includes(factKind);
+    const inClosedSet = factKind !== undefined && CLOSED_FACT_KINDS_SET.has(factKind);
     const itemState = item.item_state as string | undefined;
     const resolved = itemState === "confirmed" || itemState === "corrected";
     return inClosedSet || resolved;
@@ -82,7 +83,7 @@ export function baApply(input: z.infer<typeof baApplySchema>): { applied: Array<
     const item = openItems.get(dec);
     if (item && isBackableObservation(item)) {
       const factKind = item.fact_kind as FactKind | "inferred" | undefined;
-      if (factKind !== undefined && (CLOSED_FACT_KINDS as readonly string[]).includes(factKind)) {
+      if (factKind !== undefined && CLOSED_FACT_KINDS_SET.has(factKind)) {
         return "code-verified";
       }
       return item.provenance as Provenance | undefined;
@@ -164,7 +165,7 @@ export function baApply(input: z.infer<typeof baApplySchema>): { applied: Array<
   writeSession({
     ...session,
     pending_apply: session.pending_apply.filter(d => !consumedDecisions.has(d)),
-    updated: new Date().toISOString().slice(0, 10),
+    updated: today(),
   }, docsRoot);
 
   return { applied };

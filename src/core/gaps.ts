@@ -1,5 +1,5 @@
 import type { Artifact } from "./types.js";
-import { DESCRIPTIVE_TYPES } from "./types.js";
+import { NON_TRACEABLE_TYPES } from "./types.js";
 import { buildGraph } from "./graph.js";
 
 export interface Gap { kind: string; subject: string; message: string }
@@ -10,7 +10,8 @@ const TRACED_TYPES = new Set(["persona", "fr", "nfr", "use-case", "story"]);
 // as-is docs: they must not be flagged untraced or fed into fr-without-story
 // reasoning. computeAssessment already filters them out of the artifact list;
 // this guard keeps detectGaps correct even if called with an unfiltered list.
-const NON_GAP_TYPES = new Set<string>(["open-item", ...DESCRIPTIVE_TYPES]);
+// Shared with computeAssessment via NON_TRACEABLE_TYPES so the two never drift.
+const NON_GAP_TYPES = new Set<string>(NON_TRACEABLE_TYPES);
 
 export function detectGaps(artifactsIn: Artifact[]): Gap[] {
   const gaps: Gap[] = [];

@@ -1,6 +1,6 @@
 import type { Frontmatter } from "./types.js";
 import type { Round, Provenance } from "./taxonomy.js";
-import { nextId } from "./ids.js";
+import { nextId, today } from "./ids.js";
 import { writeArtifact, listArtifacts } from "./store.js";
 import { transitionOpenItem } from "./openItems.js";
 
@@ -18,10 +18,6 @@ export interface DecisionInput {
    * "corrected" / "confirmed-as-inferred" for the confirmation round.
    */
   provenance?: Provenance;
-}
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 export function recordDecision(input: DecisionInput, docsRoot: string): string {

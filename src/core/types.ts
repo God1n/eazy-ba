@@ -40,6 +40,12 @@ export const FILE_BACKED_TYPES: ArtifactType[] =
 // Descriptive types document what exists (as-is); they carry no normative authority.
 export const DESCRIPTIVE_TYPES: ArtifactType[] = ["glossary", "tech-surface"];
 
+// Types excluded from as-is traceability reasoning: open-items (they gate stability
+// via their own question paths) plus the descriptive as-is docs. detectGaps excludes
+// exactly these; computeAssessment excludes these AND "decision" (the ledger). Both
+// exclusion sets derive from this one so they never drift apart.
+export const NON_TRACEABLE_TYPES: ArtifactType[] = ["open-item", ...DESCRIPTIVE_TYPES];
+
 // Normative types assert what is required; the ba_apply gate demands deliberate
 // (user-decided/corrected) backing for these.
 export const NORMATIVE_TYPES: ArtifactType[] = ["persona", "fr", "nfr", "use-case", "story"];

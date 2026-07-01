@@ -2,7 +2,7 @@ import type { Artifact } from "./types.js";
 import type { Frontmatter } from "./types.js";
 import type { Question } from "./session.js";
 import type { Gap } from "./gaps.js";
-import { CLOSED_FACT_KINDS } from "./taxonomy.js";
+import { CLOSED_FACT_KINDS_SET } from "./taxonomy.js";
 import type { OpenItemInput } from "./openItems.js";
 import { loadSurfaceQuestions, loadDomainChecklist } from "./knowledge.js";
 
@@ -107,7 +107,7 @@ export function coverageQuestions(openItems: Frontmatter[]): Question[] {
 // in the auto-acceptable closed set) gate stability — a code-verified/closed-set
 // fact is self-evident and an already-confirmed/rejected one is terminal.
 export function observationQuestions(openItems: Frontmatter[]): Question[] {
-  const closed = new Set<string>(CLOSED_FACT_KINDS);
+  const closed = CLOSED_FACT_KINDS_SET;
   const out: Question[] = [];
   let i = 1;
   for (const oi of openItems) {

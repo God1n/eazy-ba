@@ -4,6 +4,7 @@ import { readSession, writeSession } from "../core/session.js";
 import { computeAssessment, type Assessment } from "../core/assessment.js";
 import { listDecisions } from "../core/decisions.js";
 import { createOrUpsertOpenItem } from "../core/openItems.js";
+import { today } from "../core/ids.js";
 import { floorOpenItemInputs } from "../core/questions.js";
 
 // Seed the artifact-independent floor (Flow 1 R5a) when a *discovery* session
@@ -35,6 +36,6 @@ export function baAssess(input: z.infer<typeof baAssessSchema>): Assessment {
   if (!session) throw new Error("No active session. Call ba_session_start first.");
   seedFloorIfDeepRound(docsRoot, session.mode);
   const a = computeAssessment(docsRoot, session.mode);
-  writeSession({ ...session, round: a.round, open_questions: a.questions, updated: new Date().toISOString().slice(0, 10) }, docsRoot);
+  writeSession({ ...session, round: a.round, open_questions: a.questions, updated: today() }, docsRoot);
   return a;
 }

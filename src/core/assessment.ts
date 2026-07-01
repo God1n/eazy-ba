@@ -9,15 +9,18 @@ import {
   coverageQuestions, observationQuestions,
 } from "./questions.js";
 import type { Mode, Round } from "./taxonomy.js";
+import { isPlanTopic } from "./taxonomy.js";
 import type { ArtifactType } from "./types.js";
-import { DESCRIPTIVE_TYPES } from "./types.js";
+import { NON_TRACEABLE_TYPES } from "./types.js";
 
 // Artifact types that are NOT normative as-is documents and must be excluded from
 // every artifact-list consumer (detectGaps, domainQuestions, change-reval). They
 // gate stability via their own question paths (open-items) or carry no normative
-// authority at all (tech-surface/glossary are descriptive as-is docs).
+// authority at all (tech-surface/glossary are descriptive as-is docs). Derived from
+// the shared NON_TRACEABLE_TYPES plus "decision" (the ledger), which this consumer
+// additionally excludes from `artifacts`.
 const NON_ARTIFACT_CONSUMER_TYPES = new Set<ArtifactType>([
-  "decision", "open-item", ...DESCRIPTIVE_TYPES,
+  "decision", ...NON_TRACEABLE_TYPES,
 ]);
 
 export interface PlanTopic { topic: string; item_state: string }
@@ -131,7 +134,7 @@ export function computeAssessment(docsRoot: string, mode: Mode): Assessment {
   const coveragePlan = openItems
     .filter(
       oi => oi.kind === "coverage-topic" && oi.item_state === "open" &&
-        typeof oi.topic === "string" && !(oi.topic as string).startsWith("floor:"),
+        isPlanTopic(oi.topic),
     )
     .map(oi => ({ topic: oi.topic as string, item_state: oi.item_state as string }));
 
@@ -139,8 +142,7 @@ export function computeAssessment(docsRoot: string, mode: Mode): Assessment {
   // (decisions exist) but not yet declared any plan topic. Advisory, not spammed —
   // it disappears as soon as the agent or user has declared a plan.
   const anyPlanTopicEver = openItems.some(
-    oi => oi.kind === "coverage-topic" &&
-      typeof oi.topic === "string" && !(oi.topic as string).startsWith("floor:"),
+    oi => oi.kind === "coverage-topic" && isPlanTopic(oi.topic),
   );
   const researchDirective =
     mode === "discovery" && decisions.length > 0 && !anyPlanTopicEver

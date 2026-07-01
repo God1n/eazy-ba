@@ -3,6 +3,7 @@ import { resolveConfig } from "../config.js";
 import { listArtifacts } from "../core/store.js";
 import { readSession } from "../core/session.js";
 import { listOpenItems } from "../core/openItems.js";
+import { isFloorTopic } from "../core/taxonomy.js";
 import { computeAssessment, type PlanTopic } from "../core/assessment.js";
 
 export const baStatusSchema = z.object({ projectRoot: z.string() });
@@ -19,7 +20,7 @@ const OFF_RAMP_MESSAGE =
 // the off-ramp — only the floor — matching "essentials covered".
 function floorCovered(docsRoot: string): boolean {
   const floor = listOpenItems(docsRoot).filter(
-    oi => oi.kind === "coverage-topic" && typeof oi.topic === "string" && (oi.topic as string).startsWith("floor:"),
+    oi => oi.kind === "coverage-topic" && isFloorTopic(oi.topic),
   );
   if (floor.length === 0) return false; // floor not yet seeded → no off-ramp
   return floor.every(oi => oi.item_state !== "open");

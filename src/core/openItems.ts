@@ -1,20 +1,9 @@
 import { createHash } from "node:crypto";
 import type { Frontmatter } from "./types.js";
-import type { ItemKind, Provenance, FactKind } from "./taxonomy.js";
-import { nextId } from "./ids.js";
+import type { ItemKind, Provenance, FactKind, ItemState } from "./taxonomy.js";
+import { ITEM_STATES, TERMINAL_STATES } from "./taxonomy.js";
+import { nextId, today } from "./ids.js";
 import { writeArtifact, listArtifacts } from "./store.js";
-
-// The open-item lifecycle. `open` gates stability; the terminal states do not.
-// Mirrors the brainstorm's item_state union; kept separate from Status (which
-// stays draft…obsolete for real docs).
-export const ITEM_STATES = [
-  "open", "answered", "confirmed", "corrected", "rejected", "retired", "applied",
-] as const;
-export type ItemState = (typeof ITEM_STATES)[number];
-
-// Terminal states cannot be re-opened. A rejected/retired item re-emitted by a
-// later run stays put (not resurrected), and an applied open-item has done its job.
-const TERMINAL_STATES: readonly ItemState[] = ["rejected", "retired", "applied"] as const;
 
 export interface OpenItemInput {
   kind: ItemKind;
@@ -28,10 +17,6 @@ export interface OpenItemInput {
   claim?: string;
   item_state?: ItemState;
   updated?: string;
-}
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 // Identity / idempotency key. Coverage-topic identity is its topic verbatim;

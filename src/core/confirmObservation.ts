@@ -13,7 +13,10 @@ import { getOpenItem, transitionOpenItem } from "./openItems.js";
 // does NOT — that is what makes the passive-assent guard bite, so a bulk/rapidly
 // mass-accepted inference cannot back an FR/NFR without a deliberate re-confirm.
 
-export interface ConfirmAnswer {
+// Module-private: nothing outside this module imports these type names. The only
+// importer, baRecordAnswers, builds the argument inline and reads fields off the
+// returned object without naming the types.
+interface ConfirmAnswer {
   question: string;
   answer: string;
   asked_round: "confirm";
@@ -36,7 +39,7 @@ export interface ConfirmAnswer {
   passive?: boolean;
 }
 
-export interface ConfirmResult {
+interface ConfirmResult {
   /** the recorded decision id, or undefined for a reject (no backing recorded). */
   decisionId?: string;
   /** the observation's resulting item_state. */

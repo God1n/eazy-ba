@@ -2,7 +2,7 @@ import { z } from "zod";
 import { resolveConfig } from "../config.js";
 import { readSession } from "../core/session.js";
 import { createOrUpsertOpenItem, getOpenItem } from "../core/openItems.js";
-import { CLOSED_FACT_KINDS, FactKindEnum } from "../core/taxonomy.js";
+import { CLOSED_FACT_KINDS, CLOSED_FACT_KINDS_SET, FactKindEnum } from "../core/taxonomy.js";
 import type { FactKind } from "../core/taxonomy.js";
 import { anchorsAllVerify } from "../core/ground.js";
 import { scanForSecrets } from "../core/scopeGuard.js";
@@ -55,7 +55,7 @@ export interface BaGroundResult {
   scope: string[];
 }
 
-const CLOSED = new Set<string>(CLOSED_FACT_KINDS);
+const CLOSED = CLOSED_FACT_KINDS_SET;
 // Fix 14: the valid set for a fact_kind read back from a stored open-item — the
 // closed (auto-acceptable) kinds plus the "inferred" fallback. Anything outside
 // this set on disk is corrupt and is coerced to "inferred".
