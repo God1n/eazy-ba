@@ -1,8 +1,39 @@
 import { z } from "zod";
+import { realpathSync } from "node:fs";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { resolveConfig } from "../config.js";
 import { readSession, writeSession } from "../core/session.js";
 import type { SessionState } from "../core/session.js";
 import { ModeEnum } from "../core/taxonomy.js";
+
+// Fix 3: containment check for a user-declared readScope entry. Resolve the
+// entry's literal prefix (up to the first wildcard) relative to projectRoot,
+// canonicalize both with realpath (so a symlink escape is caught on its real
+// location), and require the entry to stay within projectRoot. Rejects `/etc`,
+// `../../secrets`, and any symlink that escapes the project tree.
+function safeRealpath(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+}
+
+function scopeEntryEscapes(entry: string, projectRoot: string): boolean {
+  const wildcard = entry.search(/[*?[]/);
+  const literal = wildcard === -1 ? entry : entry.slice(0, wildcard);
+  // Canonicalize the root FIRST, then resolve the (relative) literal against the
+  // REAL root. A not-yet-existent child (e.g. `src/**` in a bare temp project)
+  // realpaths to its lexical path; joining it onto the already-canonical root keeps
+  // it comparable to `rootReal` — otherwise the macOS /var→/private/var root
+  // symlink would make every relative scope look like an escape.
+  const rootReal = safeRealpath(resolve(projectRoot));
+  const base = isAbsolute(literal) ? literal : join(rootReal, literal);
+  const real = safeRealpath(resolve(base));
+  if (real === rootReal) return false;
+  const rel = relative(rootReal, real);
+  return rel === "" || rel.startsWith("..") || isAbsolute(rel);
+}
 
 export const baSessionStartSchema = z.object({
   projectRoot: z.string(),
@@ -20,6 +51,16 @@ export const baSessionStartSchema = z.object({
 
 export function baSessionStart(input: z.infer<typeof baSessionStartSchema>):
   { mode: string; round: string; resumed: boolean; readScope?: string[]; next: string } {
+  // Fix 3: reject any readScope entry whose realpath escapes projectRoot BEFORE
+  // touching the session store, so an escaping scope is never persisted.
+  for (const entry of input.readScope ?? []) {
+    if (scopeEntryEscapes(entry, input.projectRoot)) {
+      throw new Error(
+        `readScope entry escapes projectRoot: "${entry}". Scope entries must resolve inside the project.`,
+      );
+    }
+  }
+
   const { docsRoot } = resolveConfig(input.projectRoot);
   const existing = readSession(docsRoot);
   const today = new Date().toISOString().slice(0, 10);

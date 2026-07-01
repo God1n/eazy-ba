@@ -56,6 +56,10 @@ export interface BaGroundResult {
 }
 
 const CLOSED = new Set<string>(CLOSED_FACT_KINDS);
+// Fix 14: the valid set for a fact_kind read back from a stored open-item — the
+// closed (auto-acceptable) kinds plus the "inferred" fallback. Anything outside
+// this set on disk is corrupt and is coerced to "inferred".
+const VALID_FACT_KINDS = new Set<string>([...CLOSED_FACT_KINDS, "inferred"]);
 
 export function baGround(input: z.infer<typeof baGroundSchema>): BaGroundResult {
   const { docsRoot } = resolveConfig(input.projectRoot);
@@ -134,7 +138,16 @@ export function baGround(input: z.infer<typeof baGroundSchema>): BaGroundResult 
         );
 
     const stored = getOpenItem(id, docsRoot);
-    const factKind = (stored?.fact_kind as FactKind | "inferred" | undefined) ?? "inferred";
+    // Fix 14: validate the fact_kind read back from the stored open-item against the
+    // known set (CLOSED_FACT_KINDS + "inferred") before trusting it. A missing or
+    // corrupted on-disk value must not be surfaced verbatim — treat it as "inferred"
+    // (the fail-safe classification) so a bad value cannot masquerade as a CLOSED,
+    // auto-accepted fact.
+    const rawFactKind = stored?.fact_kind as string | undefined;
+    const factKind: FactKind | "inferred" =
+      rawFactKind !== undefined && VALID_FACT_KINDS.has(rawFactKind)
+        ? (rawFactKind as FactKind | "inferred")
+        : "inferred";
     const itemState = (stored?.item_state as string | undefined) ?? "open";
     const provenance = stored?.provenance as string | undefined;
     recorded.push({

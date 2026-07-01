@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { baInit } from "../../src/tools/baInit.js";
 import { computeAssessment } from "../../src/core/assessment.js";
 import { createOrUpsertOpenItem, transitionOpenItem, listOpenItems } from "../../src/core/openItems.js";
+import { recordDecision } from "../../src/core/decisions.js";
 import { writeArtifact } from "../../src/core/store.js";
 import type { Frontmatter } from "../../src/core/types.js";
 
@@ -73,6 +74,36 @@ test("ground mode: zero real artifacts + an open inferred observation → stable
   expect(a.stable).toBe(false);
   const confirmQs = a.questions.filter(q => q.round === "confirm");
   expect(confirmQs.length).toBe(1);
+});
+
+// ---------------------------------------------------------------------------
+// P1 SAFETY (Fix 1): a FRESH ground session (no observations, no decisions) must
+// NOT be vacuously stable while it is still emitting the groundDirective. Before
+// this fix it fell into the else-branch, produced zero questions, and returned
+// stable:true even though groundDirective told the agent to go read code.
+// ---------------------------------------------------------------------------
+test("ground mode: fresh session (no observations) → stable=false and groundDirective present", () => {
+  const docsRoot = setup();
+  const a = computeAssessment(docsRoot, "ground");
+  expect(a.groundDirective).toBeDefined();
+  expect(a.stable).toBe(false); // directive is pending → never vacuously stable
+});
+
+// A ground session must not synthesize domain/change questions from BA decisions
+// that happen to already exist on disk — a ground session only confirms code
+// observations. Pre-existing decisions must not drive it into the else-branch.
+test("ground mode: pre-existing BA decisions do NOT emit spurious domain/change questions", () => {
+  const docsRoot = setup();
+  // A decision on disk (as a prior discovery/change session might leave).
+  recordDecision(
+    { question: "What is the scope?", answer: "The users service", asked_round: "surface", topic: "floor:scope" },
+    docsRoot,
+  );
+  const a = computeAssessment(docsRoot, "ground");
+  // No observations yet → only the directive drives the session; no domain/change/gap qs.
+  expect(a.questions.filter(q => q.round === "domain" || q.round === "change" || q.round === "gap").length).toBe(0);
+  expect(a.groundDirective).toBeDefined();
+  expect(a.stable).toBe(false);
 });
 
 // ---------------------------------------------------------------------------

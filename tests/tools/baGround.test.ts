@@ -7,6 +7,7 @@ import { baSessionStart } from "../../src/tools/baSessionStart.js";
 import { baAssess } from "../../src/tools/baAssess.js";
 import { baGround } from "../../src/tools/baGround.js";
 import { listOpenItems } from "../../src/core/openItems.js";
+import { listArtifacts, writeArtifact } from "../../src/core/store.js";
 
 // A small on-disk project plus a ground session scoped to src/**.
 function setupGround(scope: string[] = ["src/**", "package.json"]): { root: string; docsRoot: string } {
@@ -74,6 +75,40 @@ test("dependency-present with a resolving in-scope anchor is auto-accepted", () 
   const obs = observations(docsRoot);
   expect(obs[0].item_state).toBe("confirmed");
   expect(obs[0].provenance).toBe("code-verified");
+});
+
+// ---------------------------------------------------------------------------
+// Fix 14: a fact_kind read back from a stored open-item is validated against
+// [...CLOSED_FACT_KINDS, "inferred"]; a corrupted on-disk value is treated as
+// "inferred" (the fail-safe) rather than surfaced verbatim as an auto-accepted
+// closed fact.
+// ---------------------------------------------------------------------------
+test("a corrupted stored fact_kind is coerced to 'inferred' when read back", () => {
+  const { root, docsRoot } = setupGround();
+  // Ground a route-exists → recorded inferred + open (not auto-accepted).
+  const claim = "GET /users route exists";
+  baGround({
+    projectRoot: root,
+    observations: [{ fact_kind: "route-exists", claim, anchors: ["src/routes.ts"] }],
+  });
+
+  // Corrupt the stored open-item's fact_kind to a value outside the valid set.
+  const art = listArtifacts(docsRoot).find(
+    a => a.frontmatter.type === "open-item" && a.frontmatter.kind === "observation",
+  )!;
+  writeArtifact(
+    { frontmatter: { ...art.frontmatter, fact_kind: "totally-bogus-kind" as never }, body: art.body },
+    docsRoot,
+  );
+
+  // Re-ground the SAME observation (idempotent upsert returns the existing id and
+  // reads the stored — now corrupted — item back). Fix 14 must coerce to "inferred".
+  const res = baGround({
+    projectRoot: root,
+    observations: [{ fact_kind: "route-exists", claim, anchors: ["src/routes.ts"] }],
+  });
+  expect(res.recorded[0].fact_kind).toBe("inferred");
+  expect(res.recorded[0].autoAccepted).toBe(false);
 });
 
 // ---------------------------------------------------------------------------

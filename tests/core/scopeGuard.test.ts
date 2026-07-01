@@ -83,6 +83,22 @@ test("isDenied: built-in patterns match secret/CI-adjacent names", () => {
   expect(isDenied("package.json")).toBe(false);
 });
 
+// Fix 4: the deny-list is case-insensitive — an upper/mixed-case secret filename
+// (SERVER.KEY, cert.PEM, .ENV) is denied exactly like its lowercase form.
+test("isDenied: deny-list matching is case-insensitive", () => {
+  expect(isDenied("certs/SERVER.KEY")).toBe(true);
+  expect(isDenied("certs/cert.PEM")).toBe(true);
+  expect(isDenied("config/.ENV")).toBe(true);
+  expect(isDenied("Config/App.Env")).toBe(true);
+});
+
+// Fix 5: terraform variable files are denied (they routinely carry secrets).
+test("isDenied: terraform tfvars files are denied", () => {
+  expect(isDenied("infra/prod.tfvars")).toBe(true);
+  expect(isDenied("main.tfvars")).toBe(true);
+  expect(isDenied("infra/prod.tfvars.json")).toBe(true);
+});
+
 test("guardAnchor: a user-added deny entry is honored", () => {
   const root = project();
   writeFileSync(join(root, "src", "tenants.json"), "{}\n");
@@ -148,6 +164,20 @@ test("scanForSecrets: flags obvious tokens/keys/passwords (best-effort)", () => 
   ).toBeGreaterThan(0);
   // a -----BEGIN PRIVATE KEY----- block
   expect(scanForSecrets("-----BEGIN RSA PRIVATE KEY-----\nMIIE...").length).toBeGreaterThan(0);
+});
+
+// Fix 6: a pure-hex git SHA (40 hex = SHA-1, 64 hex = SHA-256) must NOT trip the
+// long-secret-blob pattern, while a genuine base64 secret still does.
+test("scanForSecrets: a git SHA is not flagged, but a base64 secret still is", () => {
+  // 40-char SHA-1 and 64-char SHA-256 — pure hex, not secrets.
+  expect(scanForSecrets("commit 5f2c1e9a8b7d6c4e3f2a1b0c9d8e7f6a5b4c3d2e is fixed")).toEqual([]);
+  expect(
+    scanForSecrets("tree e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
+  ).toEqual([]);
+  // A real base64 blob (contains '+', '/', or letters beyond a-f) is still flagged.
+  expect(
+    scanForSecrets("key=AbCdEf+GhIjKl/MnOpQrStUvWxYz0123456789ABCDEF==").length,
+  ).toBeGreaterThan(0);
 });
 
 test("scanForSecrets: ordinary prose / structural claims are not flagged", () => {

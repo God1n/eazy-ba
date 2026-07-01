@@ -72,6 +72,80 @@ test("bulk-confirm yields confirmed-as-inferred and CANNOT back a normative fr",
   ).toThrow(/deliberate/i);
 });
 
+// ── P1 SAFETY (Fix 2): an EMPTY-string "correction" is NOT a deliberate act ───
+// Before this fix `isCorrection = answer.trim() !== claim`, so answer:"" (which
+// differs from the claim) was mislabeled "corrected" and satisfied the normative
+// gate. An empty answer is passive assent, not a correction: provenance must be
+// confirmed-as-inferred and an fr backed by it must be REJECTED.
+test("empty-string 'correction' is passive (confirmed-as-inferred) and CANNOT back an fr", () => {
+  const { root, docsRoot, obsId } = setupInferred();
+
+  const res = baRecordAnswers({
+    projectRoot: root,
+    items: [confirmItem(obsId, "")], // empty answer — not a deliberate correction
+  });
+  expect(res.recorded).toHaveLength(1);
+  const decId = res.recorded[0];
+  const dec = getDecision(decId, docsRoot)!;
+  expect(dec.provenance).toBe("confirmed-as-inferred");
+  expect(dec.provenance).not.toBe("corrected");
+  // The observation is confirmed (not "corrected") — an empty answer is a plain confirm.
+  expect(getOpenItem(obsId, docsRoot)!.item_state).toBe("confirmed");
+
+  // The guard bites: an fr backed only by the empty "correction" is rejected.
+  expect(() =>
+    baApply({
+      projectRoot: root,
+      artifacts: [
+        { op: "create", type: "fr", title: "List users", body: "List users endpoint", derived_from: [decId] },
+      ],
+    }),
+  ).toThrow(/deliberate/i);
+});
+
+// ── P1 SAFETY (Fix 13): server-side passive-assent backstop ───────────────────
+// A single call carrying 3+ UNCORRECTED confirms is a mass-accept even without
+// bulk:true — ALL of them must be tagged confirmed-as-inferred, so none can back
+// a normative fr.
+test("3+ uncorrected confirms in one call are all confirmed-as-inferred (backstop, no bulk flag)", () => {
+  const root = mkdtempSync(join(tmpdir(), "ba-confirm-bulk-"));
+  baInit({ projectRoot: root });
+  baSessionStart({ projectRoot: root, mode: "ground", readScope: ["src/**"] });
+  const docsRoot = join(root, "docs/ba");
+
+  const claims = ["obs one exists", "obs two exists", "obs three exists"];
+  const obsIds = claims.map(claim =>
+    createOrUpsertOpenItem(
+      { kind: "observation", title: claim, claim, anchors: [`src/${claim}.ts`], fact_kind: "inferred", item_state: "open" },
+      docsRoot,
+    ),
+  );
+
+  const res = baRecordAnswers({
+    projectRoot: root,
+    // NOTE: no bulk flag — the server backstop must engage on 3 uncorrected confirms.
+    items: obsIds.map((id, i) => ({
+      question: `Confirm: ${claims[i]}`,
+      answer: claims[i], // verbatim echo → uncorrected confirm
+      asked_round: "confirm" as const,
+      topic: id,
+    })),
+  });
+  expect(res.recorded).toHaveLength(3);
+  for (const decId of res.recorded) {
+    expect(getDecision(decId, docsRoot)!.provenance).toBe("confirmed-as-inferred");
+  }
+  // The guard bites: an fr backed by one of them is rejected.
+  expect(() =>
+    baApply({
+      projectRoot: root,
+      artifacts: [
+        { op: "create", type: "fr", title: "Feature", body: "Feature body", derived_from: [res.recorded[0]] },
+      ],
+    }),
+  ).toThrow(/deliberate/i);
+});
+
 // ── Happy: deliberate single confirm → user-decided → fr APPLIES ──────────────
 test("deliberate confirm yields user-decided and CAN back a normative fr", () => {
   const { root, docsRoot, obsId } = setupInferred();

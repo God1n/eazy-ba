@@ -59,16 +59,31 @@ export function confirmObservation(
     throw new Error(`confirmObservation: ${answer.topic} is not an observation open-item`);
   }
 
+  // Fix 11: internal terminal-state guard. A terminal (rejected/applied)
+  // observation must not be re-resolved here — throw a clear error instead of
+  // letting transitionOpenItem raise a confusing "cannot transition" message.
+  const currentState = obs.item_state as string | undefined;
+  if (currentState === "rejected" || currentState === "applied") {
+    throw new Error(
+      `confirmObservation: observation ${answer.topic} is in terminal state '${currentState}'; it cannot be re-confirmed or corrected.`,
+    );
+  }
+
   // Reject path: terminal, no backing decision recorded.
   if (answer.resolution === "reject") {
     transitionOpenItem(answer.topic, "rejected", docsRoot);
     return { itemState: "rejected" };
   }
 
-  // Correct vs confirm: a correction is an answer whose text differs from the
-  // observation's claim (the AI's reading). A verbatim echo is a plain confirm.
+  // Correct vs confirm: a correction is a NON-EMPTY answer whose text differs from
+  // the observation's claim (the AI's reading). A verbatim echo is a plain confirm.
+  // Fix 2: an empty/whitespace-only answer is NEVER a deliberate correction — it
+  // is passive assent — so it must not be tagged "corrected" (which would satisfy
+  // the normative gate). It falls through to the confirm branch and is treated as
+  // confirmed-as-inferred.
   const claim = ((obs.claim as string | undefined) ?? (obs.title as string | undefined) ?? "").trim();
-  const isCorrection = answer.answer.trim() !== claim;
+  const answerText = answer.answer.trim();
+  const isCorrection = answerText.length > 0 && answerText !== claim;
 
   let provenance: Provenance;
   let toState: "confirmed" | "corrected";
@@ -77,8 +92,11 @@ export function confirmObservation(
     toState = "corrected";
   } else {
     // Uncorrected confirm. Bulk/passive mass-accept → confirmed-as-inferred (does
-    // NOT satisfy the normative gate). A deliberate single confirm → user-decided.
-    provenance = bulk || answer.passive ? "confirmed-as-inferred" : "user-decided";
+    // NOT satisfy the normative gate). An EMPTY answer is likewise passive assent
+    // (Fix 2): no deliberate content was supplied, so it can never be "user-decided".
+    // A deliberate single confirm (non-empty verbatim echo) → user-decided.
+    const passiveAssent = bulk || answer.passive === true || answerText.length === 0;
+    provenance = passiveAssent ? "confirmed-as-inferred" : "user-decided";
     toState = "confirmed";
   }
 

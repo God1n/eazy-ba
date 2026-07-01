@@ -18,7 +18,10 @@ import { floorOpenItemInputs } from "../core/questions.js";
 // already-answered/retired floor topic (terminal states are not resurrected).
 function seedFloorIfDeepRound(docsRoot: string, mode: string): void {
   if (mode !== "discovery") return;
-  if (listDecisions(docsRoot).length === 0) return; // still in the surface round
+  // Fix 9: count only NON-OBSOLETE decisions (mirror computeAssessment). A project
+  // whose only decisions are obsolete (all superseded) is still in the surface
+  // round and must not be floor-seeded off stale ledger entries.
+  if (listDecisions(docsRoot).filter(d => d.status !== "obsolete").length === 0) return;
   for (const input of floorOpenItemInputs()) {
     createOrUpsertOpenItem(input, docsRoot);
   }

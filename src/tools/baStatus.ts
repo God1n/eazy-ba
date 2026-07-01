@@ -29,7 +29,12 @@ export function baStatus(input: z.infer<typeof baStatusSchema>):
   { mode: string | null; openQuestions: number; gaps: number; pendingApply: number; counts: Record<string, number>; stable: boolean; openPlanTopics: number; coveragePlan: PlanTopic[]; offRamp?: string } {
   const { docsRoot } = resolveConfig(input.projectRoot);
   const session = readSession(docsRoot);
-  const artifacts = listArtifacts(docsRoot).filter(a => a.frontmatter.type !== "decision");
+  // Fix 12: the user-facing counts show real BA documents only. Exclude internal
+  // store artifacts — `decision` (the ledger) and `open-item` (coverage/observation
+  // gates) — which are implementation detail, not deliverables.
+  const artifacts = listArtifacts(docsRoot).filter(
+    a => a.frontmatter.type !== "decision" && a.frontmatter.type !== "open-item",
+  );
   const counts: Record<string, number> = {};
   for (const a of artifacts) counts[a.frontmatter.type] = (counts[a.frontmatter.type] ?? 0) + 1;
   const a = computeAssessment(docsRoot, session?.mode ?? "discovery");

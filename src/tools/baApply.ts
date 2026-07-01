@@ -116,6 +116,12 @@ export function baApply(input: z.infer<typeof baApplySchema>): { applied: Array<
     // at least one DELIBERATE backing (user-decided or corrected). code-verified
     // facts and confirmed-as-inferred passive assent do NOT satisfy this.
     const applyType = applyTypeOf(spec, docsRoot);
+    // Fix 8: an update whose target id is not found resolves to `undefined` type,
+    // which would otherwise SKIP the normative gate and only fail mid-batch in the
+    // write loop (leaving partial writes). Reject it here, before any write.
+    if (spec.op === "update" && applyType === undefined) {
+      throw new Error(`update target not found: ${spec.id}. Cannot update an artifact that does not exist.`);
+    }
     if (applyType && NORMATIVE_TYPES.includes(applyType)) {
       const hasDeliberate = spec.derived_from.some(dec => {
         const p = backingProvenance(dec);

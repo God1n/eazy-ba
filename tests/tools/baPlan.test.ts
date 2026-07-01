@@ -121,6 +121,31 @@ test("retiring a topic removes it from the open set; retiring all plan topics + 
 });
 
 // ---------------------------------------------------------------------------
+// Fix 15: retiring a topic that exists but is already in a terminal (non-open)
+// state reports it under `alreadyClosed` — distinct from a topic that never
+// existed (which is silently absent from every result list).
+// ---------------------------------------------------------------------------
+test("retire of an already-terminal plan topic is reported under alreadyClosed", () => {
+  const { root, docsRoot } = setupDeepRound();
+  baPlan({ projectRoot: root, operations: [{ op: "declare", topic: "payments-flow" }] });
+
+  // First retire moves it to terminal "retired".
+  const first = baPlan({ projectRoot: root, operations: [{ op: "retire", topic: "payments-flow" }] });
+  expect(first.retired).toEqual(["payments-flow"]);
+  expect(first.alreadyClosed).toEqual([]);
+
+  // A second retire finds the topic but it is already terminal → alreadyClosed.
+  const second = baPlan({ projectRoot: root, operations: [{ op: "retire", topic: "payments-flow" }] });
+  expect(second.retired).toEqual([]);
+  expect(second.alreadyClosed).toEqual(["payments-flow"]);
+
+  // A retire of a topic that never existed appears in NEITHER list.
+  const missing = baPlan({ projectRoot: root, operations: [{ op: "retire", topic: "never-declared" }] });
+  expect(missing.retired).toEqual([]);
+  expect(missing.alreadyClosed).toEqual([]);
+});
+
+// ---------------------------------------------------------------------------
 // Edge: a user-added topic (same ba_plan declare) is recorded identically to an
 // agent-added one — the server records either source the same way.
 // ---------------------------------------------------------------------------

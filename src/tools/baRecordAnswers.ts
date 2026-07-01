@@ -45,11 +45,31 @@ export function baRecordAnswers(input: z.infer<typeof baRecordAnswersSchema>): {
     }
   }
 
+  // Fix 13: passive-assent server backstop. The agent can omit the `bulk` flag,
+  // but a single call carrying 3+ UNCORRECTED confirm answers (a confirm resolving
+  // an OPEN observation, no reject, whose answer is empty or a verbatim echo of the
+  // claim) is a mass-accept regardless. When that threshold is met we force the
+  // confirmed-as-inferred provenance on ALL confirms in the call, so a bulk sweep
+  // cannot silently back a normative artifact even without the flag.
+  const uncorrectedConfirmCount = input.items.filter(item => {
+    if (item.resolution === "reject") return false;
+    const oi = getOpenItem(item.topic, docsRoot);
+    if (!oi || oi.kind !== "observation" || oi.item_state !== "open") return false;
+    const claim = ((oi.claim as string | undefined) ?? (oi.title as string | undefined) ?? "").trim();
+    const ans = item.answer.trim();
+    return ans.length === 0 || ans === claim; // uncorrected: empty or verbatim echo
+  }).length;
+  const effectiveBulk = input.bulk === true || uncorrectedConfirmCount >= 3;
+
   // Dedupe by question ref so retries are idempotent: an item whose ref already
   // has a recorded decision is skipped rather than recorded twice.
   const seenRefs = new Set(listDecisions(docsRoot).map(d => d.ref as string | undefined).filter(Boolean));
   const recorded: string[] = [];
   const skipped: string[] = [];
+  // Fix 10: only topics that actually recorded a coverage-topic answer here retire
+  // the matching coverage-topic gate. Items routed to the observation/confirm path
+  // (and rejected items) must NOT retire a coverage-topic that shares their topic.
+  const coverageAnsweredTopics = new Set<string>();
   for (const item of input.items) {
     if (item.ref && seenRefs.has(item.ref)) { skipped.push(item.ref); continue; }
 
@@ -75,7 +95,7 @@ export function baRecordAnswers(input: z.infer<typeof baRecordAnswersSchema>): {
           resolution: item.resolution,
           passive: item.passive,
         },
-        input.bulk === true,
+        effectiveBulk,
         docsRoot,
       );
       if (result.decisionId) {
@@ -89,6 +109,9 @@ export function baRecordAnswers(input: z.infer<typeof baRecordAnswersSchema>): {
     recorded.push(newId);
     if (item.ref) seenRefs.add(item.ref);
     for (const old of item.supersedes ?? []) supersede(old, newId, docsRoot);
+    // Fix 10: this item took the plain-decision path — its topic may answer a
+    // coverage-topic gate. Only such items are eligible to retire a coverage-topic.
+    coverageAnsweredTopics.add(item.topic);
   }
 
   // Retire the coverage-topic gate when its topic is answered. A coverage-topic
@@ -98,10 +121,12 @@ export function baRecordAnswers(input: z.infer<typeof baRecordAnswersSchema>): {
   // This is what makes the floor (Unit 5) answerable through the normal answer path
   // and lets floor-only discovery converge (R5b). Idempotent: transitioning an
   // already-answered (or terminal) item is a no-op / safely guarded.
-  const answeredTopics = new Set(input.items.map(i => i.topic));
+  // Fix 10: retire only from items that actually recorded a coverage-topic answer
+  // (the plain-decision path), never from confirm/observation-routed or rejected
+  // items — those share a `topic` (the observation id) that must not retire a gate.
   for (const oi of listOpenItems(docsRoot)) {
     if (oi.kind !== "coverage-topic" || oi.item_state !== "open") continue;
-    if (answeredTopics.has(oi.topic as string)) {
+    if (coverageAnsweredTopics.has(oi.topic as string)) {
       transitionOpenItem(oi.id as string, "answered", docsRoot);
     }
   }

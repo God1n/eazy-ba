@@ -42,6 +42,12 @@ export interface PlanTopic { topic: string; item_state: string }
 export interface BaPlanResult {
   declared: string[];
   retired: string[];
+  /**
+   * Fix 15: retire targets that WERE found as plan coverage-topics but are already
+   * in a non-open (terminal) state — nothing to retire, but the caller should know
+   * the topic exists and is already closed (distinct from a topic that never existed).
+   */
+  alreadyClosed: string[];
   /** The current OPEN plan set (agent/user coverage topics, excluding floor:*). */
   plan: PlanTopic[];
 }
@@ -57,6 +63,7 @@ export function baPlan(input: z.infer<typeof baPlanSchema>): BaPlanResult {
 
   const declared: string[] = [];
   const retired: string[] = [];
+  const alreadyClosed: string[] = [];
 
   for (const op of input.operations) {
     if (op.op === "declare") {
@@ -81,12 +88,17 @@ export function baPlan(input: z.infer<typeof baPlanSchema>): BaPlanResult {
       if (item && item.item_state === "open") {
         transitionOpenItem(item.id as string, "retired", docsRoot);
         retired.push(op.topic);
+      } else if (item) {
+        // Fix 15: the topic exists as a plan coverage-topic but is already in a
+        // non-open (terminal) state — signal it rather than silently no-op'ing,
+        // so the caller can distinguish "already closed" from "never existed".
+        alreadyClosed.push(op.topic);
       }
     }
   }
 
   const plan = currentPlan(docsRoot);
-  return { declared, retired, plan };
+  return { declared, retired, alreadyClosed, plan };
 }
 
 // The current OPEN plan set (used for the tool result and for visibility surfaces).

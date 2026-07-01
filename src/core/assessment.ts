@@ -76,10 +76,25 @@ export function computeAssessment(docsRoot: string, mode: Mode): Assessment {
   const observations = observationQuestions(openItems);
   const openItemQuestions = [...coverage, ...observations];
 
+  // Ground directive (Flow 2 R1/R2): a ground session that has recorded no
+  // observation yet. Computed up-front because it makes a fresh ground session
+  // NEVER vacuously stable (see the `stable` computation below).
+  const anyObservationEver = openItems.some(oi => oi.kind === "observation");
+  const groundDirective =
+    mode === "ground" && !anyObservationEver ? GROUND_DIRECTIVE : undefined;
+
   let round: Assessment["round"];
   let questions: Question[];
 
-  if (mode === "discovery" && decisions.length === 0) {
+  if (mode === "ground") {
+    // A ground session ONLY confirms code observations. It must never synthesize
+    // domain/change/gap questions from decisions/artifacts that happen to be on
+    // disk (e.g. left by a prior discovery/change session). Its questions are the
+    // open-item confirm/coverage questions and nothing else; the groundDirective
+    // carries a fresh (observation-less) session until ba_ground records some.
+    questions = [...openItemQuestions];
+    round = observations.length > 0 ? "confirm" : coverage.length > 0 ? "research" : "gap";
+  } else if (mode === "discovery" && decisions.length === 0) {
     // Early discovery/ground: the surface round and open-item (floor/coverage/
     // observation) questions coexist. Including open-item questions here is what
     // closes the vacuous-stability trap — without it, an open coverage-topic or
@@ -132,19 +147,13 @@ export function computeAssessment(docsRoot: string, mode: Mode): Assessment {
       ? RESEARCH_DIRECTIVE
       : undefined;
 
-  // Ground directive (Flow 2 R1/R2): a ground session that has recorded no
-  // observation yet. Once any observation exists it disappears (the open inferred
-  // ones then carry the session via confirm-questions). A ground session with open
-  // inferred observations is therefore never vacuously stable.
-  const anyObservationEver = openItems.some(oi => oi.kind === "observation");
-  const groundDirective =
-    mode === "ground" && !anyObservationEver ? GROUND_DIRECTIVE : undefined;
-
   return {
     round,
     questions,
     gaps,
-    stable: questions.length === 0 && gaps.length === 0,
+    // A pending groundDirective means the ground session still has work to do
+    // (read code, call ba_ground) — it is therefore NEVER vacuously stable.
+    stable: questions.length === 0 && gaps.length === 0 && !groundDirective,
     coveragePlan,
     ...(researchDirective ? { researchDirective } : {}),
     ...(groundDirective ? { groundDirective } : {}),

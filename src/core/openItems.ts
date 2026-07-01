@@ -107,7 +107,14 @@ export function transitionOpenItem(id: string, toState: ItemState, docsRoot: str
     a => a.frontmatter.id === id && a.frontmatter.type === "open-item",
   );
   if (!artifact) throw new Error(`Open-item not found: ${id}`);
-  const from = artifact.frontmatter.item_state as ItemState;
+  // Fix 7: validate the on-disk item_state before trusting it. A corrupted/invalid
+  // value must not be silently cast to ItemState — that could bypass the terminal-
+  // state guard below (e.g. a garbage value that is not in TERMINAL_STATES).
+  const rawFrom = artifact.frontmatter.item_state;
+  if (typeof rawFrom !== "string" || !(ITEM_STATES as readonly string[]).includes(rawFrom)) {
+    throw new Error(`Open-item ${id} has an invalid item_state on disk: ${JSON.stringify(rawFrom)}.`);
+  }
+  const from = rawFrom as ItemState;
   if (from === toState) return; // idempotent no-op
   if (TERMINAL_STATES.includes(from)) {
     throw new Error(`Open-item ${id} is in terminal state '${from}'; cannot transition to '${toState}'.`);

@@ -82,6 +82,10 @@ const DEFAULT_DENY: readonly string[] = [
   "docker-compose*.yaml",
   "**/*.tfstate",
   "*.tfstate",
+  // Fix 5: terraform variable files routinely carry secrets/credentials.
+  "**/*.tfvars",
+  "*.tfvars",
+  "**/*.tfvars.json",
   // common private-key filenames that carry no telltale extension
   "**/id_rsa",
   "id_rsa",
@@ -114,7 +118,10 @@ function globToRegExp(glob: string): RegExp {
       re += c;
     }
   }
-  return new RegExp(`^${re}$`);
+  // Fix 4: case-insensitive so SERVER.KEY / cert.PEM / .ENV are denied like their
+  // lowercase forms. File-system paths are effectively case-insensitive on macOS/
+  // Windows anyway, and a secret file's case is not a security boundary.
+  return new RegExp(`^${re}$`, "i");
 }
 
 // Normalize an anchor's file part to a forward-slash, root-relative-ish string
@@ -237,8 +244,11 @@ const SECRET_PATTERNS: readonly { name: string; re: RegExp }[] = [
   },
   // connection string with embedded credentials (scheme://user:pass@host)
   { name: "connection-string", re: /\b[a-z][a-z0-9+.-]*:\/\/[^\s:@/]+:[^\s:@/]+@[^\s/]+/i },
-  // long base64/hex-ish blob (40+ chars) — catches raw key material
-  { name: "long-secret-blob", re: /\b[A-Za-z0-9+/]{40,}={0,2}\b/ },
+  // long base64 blob (40+ chars) — catches raw key material. Fix 6: require at
+  // least one NON-HEX base64 char (`+`, `/`, or a letter outside [a-fA-F]) so a
+  // pure-hex string — notably a 40-char git SHA-1 or 64-char SHA-256 — does not
+  // trip this. Real base64 key material almost always contains such a character.
+  { name: "long-secret-blob", re: /\b(?=[A-Za-z0-9+/]*[g-zG-Z+/])[A-Za-z0-9+/]{40,}={0,2}\b/ },
 ];
 
 export interface SecretHit {
