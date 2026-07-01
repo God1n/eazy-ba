@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { baInit } from "../../src/tools/baInit.js";
@@ -236,4 +236,74 @@ test("session start persists readScope and ba_ground reads it", () => {
   });
   expect(res.scope).toEqual(["src/**"]);
   expect(res.autoAccepted).toBe(1);
+});
+
+// ---------------------------------------------------------------------------
+// Unit 9 — secret-scan (best-effort): an observation whose body contains a raw
+// secret is rejected by ba_ground and never persisted.
+// ---------------------------------------------------------------------------
+test("ba_ground rejects an observation whose claim contains a raw secret", () => {
+  const { root, docsRoot } = setupGround();
+  expect(() =>
+    baGround({
+      projectRoot: root,
+      observations: [
+        {
+          fact_kind: "entity-exists",
+          claim: "config holds api_key sk-1234567890abcdef1234567890",
+          anchors: ["src/app.ts#App"],
+        },
+      ],
+    }),
+  ).toThrow(/secret/i);
+  // Nothing was written — the whole batch is rejected before any upsert.
+  expect(observations(docsRoot).length).toBe(0);
+});
+
+// ---------------------------------------------------------------------------
+// Unit 9 — deny-list: an observation anchoring a deny-listed path cannot
+// auto-accept; it fails safe to inferred + open (anchor not verifiable).
+// ---------------------------------------------------------------------------
+test("ba_ground will not auto-accept an observation anchored at a deny-listed path", () => {
+  const { root, docsRoot } = setupGround();
+  writeFileSync(join(root, "src", ".env"), "TOKEN=abc\n");
+  const res = baGround({
+    projectRoot: root,
+    observations: [
+      { fact_kind: "entity-exists", claim: "env file present", anchors: ["src/.env"] },
+    ],
+  });
+  expect(res.autoAccepted).toBe(0);
+  expect(res.recorded[0].fact_kind).toBe("inferred");
+  expect(observations(docsRoot)[0].item_state).toBe("open");
+});
+
+// ---------------------------------------------------------------------------
+// Unit 9 — gitignore: ba_init writes a .gitignore that excludes the open-item
+// store so a missed secret in an observation body is not committed.
+// ---------------------------------------------------------------------------
+test("ba_init gitignores the open-item store", () => {
+  const root = mkdtempSync(join(tmpdir(), "ba-ground-gitignore-"));
+  const res = baInit({ projectRoot: root });
+  const gi = readFileSync(join(res.docsRoot, ".gitignore"), "utf8");
+  expect(gi).toMatch(/09-open-items/);
+});
+
+// ---------------------------------------------------------------------------
+// Unit 9 — anchors are structural references, never content snapshots: the
+// stored observation holds path references only, no file contents.
+// ---------------------------------------------------------------------------
+test("ba_ground stores only structural anchor references, never file contents", () => {
+  const { root, docsRoot } = setupGround();
+  baGround({
+    projectRoot: root,
+    observations: [
+      { fact_kind: "entity-exists", claim: "App class exists", anchors: ["src/app.ts#App"] },
+    ],
+  });
+  const obs = observations(docsRoot)[0];
+  expect(obs.anchors).toEqual(["src/app.ts#App"]);
+  // The on-disk file content ("export class App {}") is never copied into the item.
+  const serialized = JSON.stringify(obs);
+  expect(serialized).not.toMatch(/export class App/);
 });

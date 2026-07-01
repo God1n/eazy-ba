@@ -1,12 +1,20 @@
 import { z } from "zod";
 import { resolveConfig } from "../config.js";
 import { recordDecision, listDecisions, getDecision, supersede } from "../core/decisions.js";
-import { listOpenItems, transitionOpenItem } from "../core/openItems.js";
+import { listOpenItems, transitionOpenItem, getOpenItem } from "../core/openItems.js";
+import { confirmObservation } from "../core/confirmObservation.js";
 import { readSession, writeSession } from "../core/session.js";
 import { RoundEnum } from "../core/taxonomy.js";
 
 export const baRecordAnswersSchema = z.object({
   projectRoot: z.string(),
+  // Passive-assent signal (Flow 2 R13): a whole-batch UNCORRECTED mass-confirm.
+  // When true, every plain (uncorrected) confirm-round answer that resolves an
+  // inferred observation is tagged provenance "confirmed-as-inferred" rather than
+  // "user-decided" — which, per the Unit 4 gate, does NOT satisfy a normative
+  // artifact's backing requirement. A deliberate single confirm omits this flag.
+  // The exact bulk/rapid trigger is a TUNING DETAIL; this consequence is the spec.
+  bulk: z.boolean().optional(),
   items: z.array(z.object({
     question: z.string(),
     answer: z.string(),
@@ -14,6 +22,11 @@ export const baRecordAnswersSchema = z.object({
     topic: z.string(),
     ref: z.string().optional(),
     supersedes: z.array(z.string()).optional(),
+    // Confirm-round controls for an inferred-observation answer (topic === the
+    // observation open-item id). `resolution: "reject"` drops the inference (no
+    // backing recorded); `passive` tags a single confirm as passive assent.
+    resolution: z.literal("reject").optional(),
+    passive: z.boolean().optional(),
   })).min(1),
 });
 
@@ -39,6 +52,39 @@ export function baRecordAnswers(input: z.infer<typeof baRecordAnswersSchema>): {
   const skipped: string[] = [];
   for (const item of input.items) {
     if (item.ref && seenRefs.has(item.ref)) { skipped.push(item.ref); continue; }
+
+    // Confirmation round (Unit 10): an answer whose `topic` resolves to an OPEN
+    // observation open-item is confirming/correcting/rejecting an inference — not a
+    // plain decision. Route it through confirmObservation, which sets the load-bearing
+    // provenance (user-decided / corrected / confirmed-as-inferred), supersedes any
+    // prior confirm decision, and transitions the observation out of "open". A reject
+    // records NO backing decision (nothing may rest on it).
+    // Route when the topic is an observation that is still resolvable: `open`, or an
+    // already-resolved `confirmed`/`corrected` one being re-corrected (supersede the
+    // prior decision). Terminal `rejected`/`applied` observations are NOT re-opened.
+    const obs = getOpenItem(item.topic, docsRoot);
+    const resolvable = obs?.item_state === "open" || obs?.item_state === "confirmed" || obs?.item_state === "corrected";
+    if (obs && obs.kind === "observation" && resolvable) {
+      const result = confirmObservation(
+        {
+          question: item.question,
+          answer: item.answer,
+          asked_round: "confirm",
+          topic: item.topic,
+          ref: item.ref,
+          resolution: item.resolution,
+          passive: item.passive,
+        },
+        input.bulk === true,
+        docsRoot,
+      );
+      if (result.decisionId) {
+        recorded.push(result.decisionId);
+        if (item.ref) seenRefs.add(item.ref);
+      }
+      continue;
+    }
+
     const newId = recordDecision(item, docsRoot);
     recorded.push(newId);
     if (item.ref) seenRefs.add(item.ref);

@@ -539,7 +539,7 @@ override → realpath containment. Confirm the MCP process's file permissions bo
 **Verification:** no anchor escapes scope; deny-listed paths never anchored; docsRoot realpath
 contained; the body-regex is documented as best-effort, not a guarantee.
 
-- [ ] **Unit 10: confirmation round + passive-assent guard + as-is materialization**
+- [x] **Unit 10: confirmation round + passive-assent guard + as-is materialization**
 
 **Goal:** Confirm inferences via the Flow 1 engine; tag passive assent; materialize descriptive
 as-is drafts.
