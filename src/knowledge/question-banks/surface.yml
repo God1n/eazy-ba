@@ -8,3 +8,9 @@
   text: "How will you know this is successful? What outcome or metric matters most?"
 - topic: constraints
   text: "Are there hard constraints — deadlines, platforms, regulations, or systems it must integrate with?"
+  options:
+    - "A hard deadline"
+    - "Specific platform(s) required"
+    - "Regulatory / compliance requirements"
+    - "Must integrate with an existing system"
+    - "No hard constraints"

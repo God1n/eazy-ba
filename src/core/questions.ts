@@ -50,6 +50,9 @@ export function floorOpenItemInputs(): OpenItemInput[] {
 export function surfaceQuestions(): Question[] {
   return loadSurfaceQuestions().map((q, i) => ({
     ref: `Q-s${i + 1}`, text: q.text, topic: q.topic, round: "surface",
+    // Pass through server-seeded options where the bank defines them (only the
+    // genuinely-fixed questions, e.g. constraints); the agent generates the rest.
+    ...(q.options && q.options.length > 0 ? { options: q.options } : {}),
   }));
 }
 

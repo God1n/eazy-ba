@@ -8,6 +8,13 @@ export interface Question {
   text: string;
   topic: string;
   round: Round;
+  // Server-seeded candidate answers, present only where the choices are
+  // genuinely fixed (MCQ design spec). The host agent renders these as
+  // multiple-choice options, adds its own contextual options, and always offers
+  // an "Or describe your own" free-text escape. Presentation-only — whichever
+  // option the user picks (or types) is recorded verbatim; options never touch
+  // the decision ledger.
+  options?: string[];
 }
 
 export interface SessionState {
