@@ -1,11 +1,19 @@
 {
   "name": "eazy-ba",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A personal Business Analyst MCP server: requirement gathering, gap analysis, and BA documentation (user stories, requirements, traceability) as markdown.",
   "type": "module",
-  "bin": { "eazy-ba": "dist/index.js" },
-  "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=18" },
+  "bin": {
+    "eazy-ba": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json && node -e \"require('fs').cpSync('src/knowledge','dist/knowledge',{recursive:true})\"",
     "test": "vitest run",
@@ -28,7 +36,9 @@
     "type": "git",
     "url": "git+https://github.com/God1n/eazy-ba.git"
   },
-  "bugs": { "url": "https://github.com/God1n/eazy-ba/issues" },
+  "bugs": {
+    "url": "https://github.com/God1n/eazy-ba/issues"
+  },
   "homepage": "https://github.com/God1n/eazy-ba#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
