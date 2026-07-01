@@ -7,7 +7,7 @@ import type { ArtifactType, Frontmatter } from "../core/types.js";
 
 export const baCreateSchema = z.object({
   projectRoot: z.string(),
-  type: z.enum(["persona", "fr", "nfr", "use-case", "story"]),
+  type: z.enum(["persona", "fr", "nfr", "use-case", "story", "glossary", "tech-surface"]),
   title: z.string().min(1),
   priority: z.enum(["must", "should", "could", "wont"]).optional(),
   implements: z.array(z.string()).optional(),
