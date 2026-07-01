@@ -7,7 +7,7 @@ import { parse } from "yaml";
 const here = dirname(fileURLToPath(import.meta.url));        // .../core
 const knowledgeDir = join(here, "..", "knowledge");
 
-export interface SurfaceQuestion { topic: string; text: string }
+export interface SurfaceQuestion { topic: string; text: string; options?: string[] }
 export interface ChecklistEntry { type: string; dimensions: string[] }
 
 export function loadSurfaceQuestions(): SurfaceQuestion[] {

@@ -73,3 +73,14 @@ test("observationQuestions emits a confirm-round question only for OPEN inferred
   expect(qs[0].round).toBe("confirm");
   expect(qs[0].text).toContain("GET /users lists users");
 });
+
+test("surfaceQuestions seeds options only on the genuinely-fixed question (constraints)", () => {
+  const qs = surfaceQuestions();
+  const constraints = qs.find(q => q.topic === "constraints");
+  const problem = qs.find(q => q.topic === "problem");
+  // constraints is a fixed-choice question -> server-seeded options present.
+  expect(constraints?.options?.length).toBeGreaterThanOrEqual(3);
+  expect(constraints?.options).toContain("No hard constraints");
+  // open-ended questions carry no seeded options (agent generates them).
+  expect(problem && "options" in problem).toBe(false);
+});
